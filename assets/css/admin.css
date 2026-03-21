@@ -1,0 +1,10 @@
+.content h2,
+.content h3 {
+  margin-top: 0;
+}
+
+#billing-list li,
+#plans-list li {
+  display: grid;
+  gap: 6px;
+}
