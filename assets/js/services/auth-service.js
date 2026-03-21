@@ -25,7 +25,11 @@ export async function loginWithEmail(email, password) {
   console.log('E-mail autenticado:', credential.user.email);
   console.log('Projeto Firebase em uso:', auth.app.options.projectId);
 
-  const session = await resolveUserProfile(credential.user.uid, credential.user.email);
+  const session = await resolveUserProfile(
+    credential.user.uid,
+    credential.user.email
+  );
+
   setSession(session);
   return session;
 }
@@ -40,24 +44,53 @@ export function observeAuthState(callback) {
 }
 
 export async function resolveUserProfile(uid, email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+
+  console.log('Tentando localizar admin por UID em:', `platformAdmins/${uid}`);
+
   const adminReference = doc(db, 'platformAdmins', uid);
-
-  console.log('Tentando localizar admin em:', `platformAdmins/${uid}`);
-
   const adminSnapshot = await getDoc(adminReference);
 
-  console.log('Admin encontrado?', adminSnapshot.exists());
+  console.log('Admin encontrado por UID?', adminSnapshot.exists());
 
   if (adminSnapshot.exists()) {
-    console.log('Documento admin:', adminSnapshot.data());
+    console.log('Documento admin por UID:', adminSnapshot.data());
 
     return {
       uid,
-      email,
+      email: normalizedEmail,
       role: 'admin',
       tenantId: null
     };
   }
+
+  console.log('Tentando localizar admin por e-mail em platformAdmins...');
+
+  const platformAdminsReference = collection(db, 'platformAdmins');
+  const adminByEmailQuery = query(
+    platformAdminsReference,
+    where('email', '==', normalizedEmail),
+    limit(1)
+  );
+
+  const adminByEmailSnapshot = await getDocs(adminByEmailQuery);
+
+  console.log('Admin encontrado por e-mail?', !adminByEmailSnapshot.empty);
+
+  if (!adminByEmailSnapshot.empty) {
+    const adminData = adminByEmailSnapshot.docs[0].data();
+
+    console.log('Documento admin por e-mail:', adminData);
+
+    return {
+      uid,
+      email: normalizedEmail,
+      role: 'admin',
+      tenantId: null
+    };
+  }
+
+  console.log('Tentando localizar tenant user por UID...');
 
   const tenantUsersReference = collection(db, 'tenantUsers');
   const tenantUsersQuery = query(
@@ -77,7 +110,7 @@ export async function resolveUserProfile(uid, email) {
 
     return {
       uid,
-      email,
+      email: normalizedEmail,
       role: 'tenant',
       tenantId: tenantUser.tenantId
     };
