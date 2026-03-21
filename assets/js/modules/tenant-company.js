@@ -31,11 +31,15 @@ if (!requireTenantUser()) {
 }
 
 const tenantId = getTenantId();
+
 const logoutButton = document.getElementById('logout-button');
 const supportButton = document.getElementById('support-button');
+const publicPageLinkButton = document.querySelector('.sidebar-footer a.button');
+
 const serviceForm = document.getElementById('service-form');
 const customerForm = document.getElementById('customer-form');
 const appointmentForm = document.getElementById('appointment-form');
+
 const serviceFeedback = document.getElementById('service-feedback');
 const customerFeedback = document.getElementById('customer-feedback');
 const appointmentFeedback = document.getElementById('appointment-feedback');
@@ -61,6 +65,12 @@ async function loadTenantData() {
   setText('company-plan', tenant.planId || '-');
   setText('company-billing-mode', formatBillingMode(tenant.billingMode));
   setText('company-status', formatSubscriptionStatus(tenant.subscriptionStatus));
+
+  if (publicPageLinkButton && tenant.slug) {
+    publicPageLinkButton.href = `agendar.html?slug=${tenant.slug}`;
+  }
+
+  return tenant;
 }
 
 async function loadDashboardSummary() {
@@ -73,7 +83,7 @@ async function loadDashboardSummary() {
 async function loadSupportButton() {
   const settings = await getPlatformSettings();
 
-  if (!settings?.supportWhatsapp) {
+  if (!settings?.supportWhatsapp || !supportButton) {
     return;
   }
 
@@ -83,8 +93,20 @@ async function loadSupportButton() {
   );
 }
 
+async function loadTenantCounters() {
+  const customersListElement = document.getElementById('customers-list');
+  const appointmentsListElement = document.getElementById('appointments-list');
+
+  const customersCount = customersListElement?.children?.length || 0;
+  const appointmentsCount = appointmentsListElement?.children?.length || 0;
+
+  setText('tenant-stat-customers', customersCount > 0 ? String(customersCount) : '0');
+  setText('tenant-stat-today', appointmentsCount > 0 ? String(appointmentsCount) : '0');
+}
+
 serviceForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+
   const success = await submitCreateService(serviceForm, serviceFeedback);
 
   if (success) {
@@ -94,20 +116,24 @@ serviceForm?.addEventListener('submit', async (event) => {
 
 customerForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+
   const success = await submitCreateCustomer(customerForm, customerFeedback);
 
   if (success) {
     await renderTenantCustomersList();
+    await loadTenantCounters();
   }
 });
 
 appointmentForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+
   const success = await submitCreateAppointment(appointmentForm, appointmentFeedback);
 
   if (success) {
     await renderTenantAppointmentsList();
     await loadTenantReportsIntoPage();
+    await loadTenantCounters();
   }
 });
 
@@ -116,10 +142,12 @@ async function init() {
     await loadTenantData();
     await loadDashboardSummary();
     await loadSupportButton();
+
     await renderTenantServicesList();
     await renderTenantCustomersList();
     await renderTenantAppointmentsList();
     await loadTenantReportsIntoPage();
+    await loadTenantCounters();
   } catch (error) {
     console.error(error);
   }
