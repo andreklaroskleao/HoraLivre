@@ -1,35 +1,3 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  updateDoc
-} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
-
-import { db } from '../config/firebase-init.js';
-
-export async function getPlatformSettings() {
-  const ref = doc(db, 'platformSettings', 'main');
-  const snapshot = await getDoc(ref);
-
-  if (!snapshot.exists()) {
-    return null;
-  }
-
-  return {
-    id: snapshot.id,
-    ...snapshot.data()
-  };
-}
-
-export async function updatePlatformSettings(data) {
-  const ref = doc(db, 'platformSettings', 'main');
-  await updateDoc(ref, {
-    ...data,
-    updatedAt: new Date().toISOString()
-  });
-}
-
 export async function getAdminDashboardMetrics() {
   const tenantsSnapshot = await getDocs(collection(db, 'tenants'));
   const billingSnapshot = await getDocs(collection(db, 'billingRecords'));
@@ -51,7 +19,7 @@ export async function getAdminDashboardMetrics() {
       activeCount += 1;
     }
 
-    if (item.isBlocked === true || item.subscriptionStatus === 'blocked') {
+    if (item.subscriptionStatus === 'blocked' || item.isBlocked === true) {
       blockedCount += 1;
     }
   });
