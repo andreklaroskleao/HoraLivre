@@ -4,15 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login - HoraLivre</title>
-  <link rel="stylesheet" href="assets/css/global.css">
-  <link rel="stylesheet" href="assets/css/components.css">
+
+  <link rel="stylesheet" href="./assets/css/global.css">
+  <link rel="stylesheet" href="./assets/css/components.css">
 </head>
 <body>
   <main class="center-page">
     <section class="card auth-card">
       <span class="badge">HoraLivre</span>
       <h1>Entrar</h1>
-      <p class="muted">Base inicial com autenticação preparada para admin master e cliente.</p>
+      <p class="muted">
+        Acesse sua conta para entrar como administrador da plataforma ou cliente da empresa.
+      </p>
 
       <form id="login-form" class="stack">
         <label>
@@ -29,16 +32,9 @@
       </form>
 
       <p id="auth-message" class="feedback"></p>
-
-      <div class="divider"></div>
-
-      <div class="stack small">
-        <button class="button" type="button" id="demo-admin">Entrar como admin demo</button>
-        <button class="button" type="button" id="demo-tenant">Entrar como cliente demo</button>
-      </div>
     </section>
   </main>
 
-  <script type="module" src="assets/js/modules/auth-ui.js"></script>
+  <script type="module" src="./assets/js/modules/auth-ui.js"></script>
 </body>
 </html>
