@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel do Cliente - HoraLivre</title>
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/cliente.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div>
+        <span class="badge">HoraLivre</span>
+        <h1 class="sidebar-title">Painel do Cliente</h1>
+        <p class="sidebar-subtitle">Operação da empresa</p>
+      </div>
+
+      <nav class="nav-list">
+        <a class="nav-link active" href="#dashboard">Dashboard</a>
+        <a class="nav-link" href="#empresa">Empresa</a>
+        <a class="nav-link" href="#servicos">Serviços</a>
+        <a class="nav-link" href="#clientes">Clientes Finais</a>
+        <a class="nav-link" href="#agenda">Agenda</a>
+        <a class="nav-link" href="#relatorios">Relatórios</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a class="button" href="agendar.html?slug=demo-horalivre">Ver página pública</a>
+        <button class="button danger" id="logout-button" type="button">Sair</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Área da empresa</p>
+          <h2 id="tenant-business-name">Minha Empresa</h2>
+          <p class="muted">
+            Painel individual do cliente, mantendo compatibilidade com empresa, serviços,
+            clientes finais, agenda, relatórios, logo por URL externa e suporte via WhatsApp.
+          </p>
+        </div>
+      </header>
+
+      <section id="dashboard" class="section">
+        <div class="stats-grid">
+          <article class="stat-card">
+            <span class="stat-label">Agendamentos hoje</span>
+            <strong class="stat-value" id="tenant-stat-today">0</strong>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-label">Concluídos no período</span>
+            <strong class="stat-value" id="tenant-stat-completed">0</strong>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-label">Clientes finais</span>
+            <strong class="stat-value" id="tenant-stat-customers">0</strong>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-label">Valor previsto</span>
+            <strong class="stat-value" id="tenant-stat-billing">R$ 0,00</strong>
+          </article>
+        </div>
+      </section>
+
+      <section id="empresa" class="section">
+        <div class="section-heading">
+          <h3>Dados da empresa</h3>
+        </div>
+
+        <div class="card">
+          <div class="grid two-col">
+            <div>
+              <p><strong>Nome:</strong> <span id="company-name">-</span></p>
+              <p><strong>Slug:</strong> <span id="company-slug">-</span></p>
+              <p><strong>WhatsApp:</strong> <span id="company-whatsapp">-</span></p>
+              <p><strong>Descrição:</strong> <span id="company-description">-</span></p>
+            </div>
+
+            <div>
+              <p><strong>Logo URL:</strong> <span id="company-logo-url">-</span></p>
+              <p><strong>Plano:</strong> <span id="company-plan">-</span></p>
+              <p><strong>Cobrança:</strong> <span id="company-billing-mode">-</span></p>
+              <p><strong>Status:</strong> <span id="company-status">-</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="servicos" class="section">
+        <div class="section-heading">
+          <h3>Serviços</h3>
+        </div>
+
+        <div class="card">
+          <ul class="simple-list" id="services-list"></ul>
+        </div>
+      </section>
+
+      <section id="clientes" class="section">
+        <div class="section-heading">
+          <h3>Clientes finais</h3>
+        </div>
+
+        <div class="card">
+          <ul class="simple-list" id="customers-list"></ul>
+        </div>
+      </section>
+
+      <section id="agenda" class="section">
+        <div class="section-heading">
+          <h3>Agenda</h3>
+        </div>
+
+        <div class="card">
+          <ul class="simple-list" id="appointments-list"></ul>
+        </div>
+      </section>
+
+      <section id="relatorios" class="section">
+        <div class="section-heading">
+          <h3>Relatórios e cobrança</h3>
+        </div>
+
+        <div class="card">
+          <p><strong>Concluídos no período:</strong> <span id="report-completed">0</span></p>
+          <p><strong>Valor devido:</strong> <span id="report-total">R$ 0,00</span></p>
+          <p><strong>Status da cobrança:</strong> <span id="report-status">-</span></p>
+          <div class="top-gap">
+            <a class="button primary" id="support-button" href="#" target="_blank" rel="noopener noreferrer">
+              Falar com suporte no WhatsApp
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="assets/js/modules/tenant-company.js"></script>
+</body>
+</html>
