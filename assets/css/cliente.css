@@ -1,0 +1,6 @@
+#services-list li,
+#customers-list li,
+#appointments-list li {
+  display: grid;
+  gap: 6px;
+}
