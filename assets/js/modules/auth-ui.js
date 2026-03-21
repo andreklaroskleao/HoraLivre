@@ -4,8 +4,6 @@ const form = document.getElementById('login-form');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const messageEl = document.getElementById('auth-message');
-const demoAdminButton = document.getElementById('demo-admin');
-const demoTenantButton = document.getElementById('demo-tenant');
 
 function showMessage(text, isError = false) {
   messageEl.textContent = text;
@@ -37,17 +35,7 @@ form?.addEventListener('submit', async (event) => {
     showMessage('Login realizado com sucesso.');
     redirectByRole(session);
   } catch (error) {
-    showMessage('Não foi possível entrar.', true);
+    showMessage(error.message || 'Não foi possível entrar.', true);
     console.error(error);
   }
-});
-
-demoAdminButton?.addEventListener('click', async () => {
-  const session = await loginWithEmail('admin@horalivre.com');
-  redirectByRole(session);
-});
-
-demoTenantButton?.addEventListener('click', async () => {
-  const session = await loginWithEmail('cliente@demo.com');
-  redirectByRole(session);
 });
