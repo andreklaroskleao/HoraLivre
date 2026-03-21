@@ -1,6 +1,10 @@
 import { getTenantBySlug } from './tenant-service.js';
 import { listActiveServicesByTenant } from './service-service.js';
-import { findCustomerByPhone, createCustomer, updateCustomer } from './customer-service.js';
+import {
+  findCustomerByPhone,
+  createCustomer,
+  updateCustomer
+} from './customer-service.js';
 import { createAppointment } from './appointment-service.js';
 
 export async function getPublicTenantBySlug(slug) {
@@ -15,6 +19,10 @@ export async function getPublicTenantBySlug(slug) {
   }
 
   if (tenant.isBlocked === true) {
+    return null;
+  }
+
+  if (tenant.subscriptionStatus === 'blocked') {
     return null;
   }
 
@@ -49,45 +57,56 @@ export async function createPublicBooking({
     throw new Error('Empresa não encontrada ou página pública indisponível.');
   }
 
-  const existingCustomer = await findCustomerByPhone(tenant.id, customerPhone);
+  const normalizedPhone = String(customerPhone || '').trim();
+  const normalizedEmail = String(customerEmail || '').trim();
+  const normalizedName = String(customerName || '').trim();
+
+  const existingCustomer = await findCustomerByPhone(tenant.id, normalizedPhone);
 
   let customerId = null;
+  const appointmentDateIso = new Date(`${date}T${time}:00`).toISOString();
 
   if (existingCustomer) {
     customerId = existingCustomer.id;
 
     await updateCustomer(existingCustomer.id, {
-      name: customerName,
-      email: customerEmail || existingCustomer.email || '',
-      lastAppointmentAt: `${date}T${time}:00`
+      name: normalizedName,
+      email: normalizedEmail || existingCustomer.email || '',
+      lastAppointmentAt: appointmentDateIso
     });
   } else {
     const createdCustomer = await createCustomer({
       tenantId: tenant.id,
-      name: customerName,
-      phone: customerPhone,
-      email: customerEmail || '',
-      lastAppointmentAt: `${date}T${time}:00`
+      name: normalizedName,
+      phone: normalizedPhone,
+      email: normalizedEmail,
+      notes: '',
+      totalAppointments: 0,
+      totalSpent: 0,
+      lastAppointmentAt: appointmentDateIso
     });
 
     customerId = createdCustomer.id;
   }
 
-  const startAt = `${date}T${time}:00`;
+  const startAt = new Date(`${date}T${time}:00`).toISOString();
   const startDate = new Date(startAt);
-  const endDate = new Date(startDate.getTime() + Number(durationMinutes || 0) * 60000);
-  const endAt = endDate.toISOString().slice(0, 19);
+  const endDate = new Date(
+    startDate.getTime() + Number(durationMinutes || 0) * 60000
+  );
+  const endAt = endDate.toISOString();
 
   return createAppointment({
     tenantId: tenant.id,
     customerId,
-    customerName,
+    customerName: normalizedName,
     serviceId,
     serviceName,
     startAt,
     endAt,
-    price,
+    price: Number(price || 0),
     status: 'scheduled',
-    source: 'public_page'
+    source: 'public_page',
+    notes: ''
   });
 }
