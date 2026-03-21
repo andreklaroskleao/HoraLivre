@@ -20,9 +20,9 @@ export async function listAppointmentsByTenant(tenantId) {
 
   const snapshot = await getDocs(appointmentsQuery);
 
-  return snapshot.docs.map((docItem) => ({
-    id: docItem.id,
-    ...docItem.data()
+  return snapshot.docs.map((documentItem) => ({
+    id: documentItem.id,
+    ...documentItem.data()
   }));
 }
 
@@ -37,9 +37,9 @@ export async function listAppointmentsByTenantAndPeriod(tenantId, startIso, endI
 
   const snapshot = await getDocs(appointmentsQuery);
 
-  return snapshot.docs.map((docItem) => ({
-    id: docItem.id,
-    ...docItem.data()
+  return snapshot.docs.map((documentItem) => ({
+    id: documentItem.id,
+    ...documentItem.data()
   }));
 }
 
@@ -64,18 +64,18 @@ export async function createAppointment(data) {
 }
 
 export async function updateAppointment(appointmentId, data) {
-  const ref = doc(db, 'appointments', appointmentId);
+  const reference = doc(db, 'appointments', appointmentId);
 
-  await updateDoc(ref, {
+  await updateDoc(reference, {
     ...data,
     updatedAt: new Date().toISOString()
   });
 }
 
 export async function updateAppointmentStatus(appointmentId, status) {
-  const ref = doc(db, 'appointments', appointmentId);
+  const reference = doc(db, 'appointments', appointmentId);
 
-  await updateDoc(ref, {
+  await updateDoc(reference, {
     status,
     updatedAt: new Date().toISOString()
   });
@@ -84,5 +84,13 @@ export async function updateAppointmentStatus(appointmentId, status) {
 export async function countCompletedAppointments(tenantId, startIso, endIso) {
   const appointments = await listAppointmentsByTenantAndPeriod(tenantId, startIso, endIso);
 
-  return appointments.filter((item) => item.status === 'completed').length;
+  return appointments.filter((appointment) => appointment.status === 'completed').length;
+}
+
+export async function sumCompletedAppointmentsAmount(tenantId, startIso, endIso) {
+  const appointments = await listAppointmentsByTenantAndPeriod(tenantId, startIso, endIso);
+
+  return appointments
+    .filter((appointment) => appointment.status === 'completed')
+    .reduce((total, appointment) => total + Number(appointment.price || 0), 0);
 }
