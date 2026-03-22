@@ -23,12 +23,16 @@ import {
 } from './tenant-services.js';
 import {
   renderTenantCustomersList,
-  submitCreateCustomer
+  submitSaveCustomer,
+  resetCustomerForm
 } from './tenant-customers.js';
 import {
   renderTenantAppointmentsList,
-  submitCreateAppointment,
-  bindAppointmentFilters
+  submitSaveAppointment,
+  bindAppointmentFilters,
+  loadAppointmentFormDependencies,
+  bindAppointmentFormSelects,
+  resetAppointmentForm
 } from './tenant-appointments.js';
 import {
   loadTenantReportsIntoPage,
@@ -66,7 +70,10 @@ const companyFeedback = document.getElementById('company-feedback');
 const serviceFeedback = document.getElementById('service-feedback');
 const customerFeedback = document.getElementById('customer-feedback');
 const appointmentFeedback = document.getElementById('appointment-feedback');
+
 const serviceCancelEditButton = document.getElementById('service-cancel-edit-button');
+const customerCancelEditButton = document.getElementById('customer-cancel-edit-button');
+const appointmentCancelEditButton = document.getElementById('appointment-cancel-edit-button');
 
 function resolveEffectiveBillingMode(tenant, billingSettings, plan) {
   return (
@@ -102,7 +109,17 @@ logoutButton?.addEventListener('click', async () => {
 
 serviceCancelEditButton?.addEventListener('click', () => {
   resetServiceForm();
-  showFeedback(serviceFeedback, 'Edição cancelada.', 'success');
+  showFeedback(serviceFeedback, 'Edição de serviço cancelada.', 'success');
+});
+
+customerCancelEditButton?.addEventListener('click', () => {
+  resetCustomerForm();
+  showFeedback(customerFeedback, 'Edição de cliente cancelada.', 'success');
+});
+
+appointmentCancelEditButton?.addEventListener('click', () => {
+  resetAppointmentForm();
+  showFeedback(appointmentFeedback, 'Edição de agendamento cancelada.', 'success');
 });
 
 async function loadTenantData() {
@@ -243,16 +260,18 @@ serviceForm?.addEventListener('submit', async (event) => {
 
   if (success) {
     await renderTenantServicesList();
+    await loadAppointmentFormDependencies();
   }
 });
 
 customerForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const success = await submitCreateCustomer(customerForm, customerFeedback);
+  const success = await submitSaveCustomer(customerForm, customerFeedback);
 
   if (success) {
     await renderTenantCustomersList();
+    await loadAppointmentFormDependencies();
     await loadDashboardSummary();
   }
 });
@@ -260,7 +279,7 @@ customerForm?.addEventListener('submit', async (event) => {
 appointmentForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const success = await submitCreateAppointment(appointmentForm, appointmentFeedback);
+  const success = await submitSaveAppointment(appointmentForm, appointmentFeedback);
 
   if (success) {
     await renderTenantAppointmentsList();
@@ -279,6 +298,8 @@ async function init() {
 
     await renderTenantServicesList();
     await renderTenantCustomersList();
+    await loadAppointmentFormDependencies();
+    bindAppointmentFormSelects();
     await renderTenantAppointmentsList();
     await loadTenantReportsIntoPage({
       reportAppointmentsListElementId: 'report-appointments-list'
