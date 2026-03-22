@@ -189,12 +189,14 @@
         <div class="section-heading">
           <h3>Clientes finais</h3>
           <p class="muted">
-            Cadastre e acompanhe os clientes finais do seu negócio.
+            Cadastre, edite e acompanhe os clientes finais do seu negócio.
           </p>
         </div>
 
         <div class="card">
           <form id="customer-form" class="stack">
+            <input id="customer-edit-id" type="hidden">
+
             <label>
               <span>Nome</span>
               <input name="name" type="text" required>
@@ -215,7 +217,11 @@
               <input name="notes" type="text">
             </label>
 
-            <button class="button primary" type="submit">Cadastrar cliente</button>
+            <div class="form-actions">
+              <button class="button primary" type="submit">Salvar cliente</button>
+              <button class="button" id="customer-cancel-edit-button" type="button">Cancelar edição</button>
+            </div>
+
             <p id="customer-feedback" class="feedback"></p>
           </form>
 
@@ -229,32 +235,33 @@
         <div class="section-heading">
           <h3>Agenda</h3>
           <p class="muted">
-            Cadastre agendamentos do painel da empresa. A cobrança por uso considera apenas
+            Cadastre e edite agendamentos. A cobrança por uso considera apenas
             agendamentos com status concluído.
           </p>
         </div>
 
         <div class="card">
           <form id="appointment-form" class="stack">
+            <input id="appointment-edit-id" type="hidden">
+
             <label>
-              <span>Identificador do cliente</span>
-              <input name="customerId" type="text">
+              <span>Cliente</span>
+              <select id="appointment-customer-select">
+                <option value="">Selecione um cliente</option>
+              </select>
             </label>
 
             <label>
-              <span>Nome do cliente</span>
-              <input name="customerName" type="text" required>
+              <span>Serviço</span>
+              <select id="appointment-service-select">
+                <option value="">Selecione um serviço</option>
+              </select>
             </label>
 
-            <label>
-              <span>Identificador do serviço</span>
-              <input name="serviceId" type="text">
-            </label>
-
-            <label>
-              <span>Nome do serviço</span>
-              <input name="serviceName" type="text" required>
-            </label>
+            <input name="customerId" type="hidden">
+            <input name="customerName" type="hidden">
+            <input name="serviceId" type="hidden">
+            <input name="serviceName" type="hidden">
 
             <label>
               <span>Data</span>
@@ -277,11 +284,26 @@
             </label>
 
             <label>
+              <span>Status</span>
+              <select name="status">
+                <option value="scheduled">Agendado</option>
+                <option value="confirmed">Confirmado</option>
+                <option value="completed">Concluído</option>
+                <option value="canceled">Cancelado</option>
+                <option value="no_show">Faltou</option>
+              </select>
+            </label>
+
+            <label>
               <span>Observações</span>
               <input name="notes" type="text">
             </label>
 
-            <button class="button primary" type="submit">Cadastrar agendamento</button>
+            <div class="form-actions">
+              <button class="button primary" type="submit">Salvar agendamento</button>
+              <button class="button" id="appointment-cancel-edit-button" type="button">Cancelar edição</button>
+            </div>
+
             <p id="appointment-feedback" class="feedback"></p>
           </form>
 
