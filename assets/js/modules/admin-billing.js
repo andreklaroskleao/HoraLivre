@@ -3,12 +3,12 @@ import { listTenants } from '../services/tenant-service.js';
 import {
   getBillingSettingsByTenant,
   calculateBillingForPeriod,
-  generateBillingRecord,
+  createOrReplaceBillingRecord,
   listBillingRecords,
   markBillingRecordAsPaid
 } from '../services/billing-service.js';
 import { countCompletedAppointments } from '../services/appointment-service.js';
-import { formatCurrencyBRL } from '../utils/formatters.js';
+import { formatCurrencyBRL, formatBillingMode } from '../utils/formatters.js';
 import { getMonthReference, getStartAndEndOfCurrentMonth } from '../utils/date-utils.js';
 import { clearElement, createListItem } from '../utils/dom-utils.js';
 
@@ -36,7 +36,7 @@ export async function generateCurrentMonthBillingForAllTenants() {
       pricePerExecutedService: billingSettings?.pricePerExecutedService || 0
     });
 
-    await generateBillingRecord({
+    await createOrReplaceBillingRecord(`billing_${monthReference}_${tenant.id}`, {
       tenantId: tenant.id,
       monthRef: monthReference,
       billingMode: tenant.billingMode,
@@ -61,14 +61,23 @@ export async function renderAdminBillingList(elementId = 'billing-list') {
 
   clearElement(element);
 
+  if (records.length === 0) {
+    element.appendChild(createListItem(`
+      <strong>Nenhum registro de cobrança encontrado</strong><br>
+      Gere a cobrança mensal para exibir os registros aqui.
+    `));
+    return;
+  }
+
   records.forEach((record) => {
     element.appendChild(createListItem(`
       <strong>${record.monthRef}</strong><br>
       Tenant: ${record.tenantId}<br>
-      Modo: ${record.billingMode || '-'}<br>
+      Modo: ${formatBillingMode(record.billingMode)}<br>
       Concluídos: ${record.completedAppointments || 0}<br>
       Total: ${formatCurrencyBRL(record.totalAmount || 0)}<br>
-      Status: ${record.status || '-'}
+      Status: ${record.status || '-'}<br>
+      Identificador: ${record.id}
     `));
   });
 }
