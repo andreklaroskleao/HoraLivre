@@ -5,7 +5,10 @@ import {
   createCustomer,
   updateCustomer
 } from './customer-service.js';
-import { createAppointment } from './appointment-service.js';
+import {
+  createAppointment,
+  listBusyAppointmentsByTenantAndDay
+} from './appointment-service.js';
 
 export async function getPublicTenantBySlug(slug) {
   const tenant = await getTenantBySlug(slug);
@@ -37,6 +40,19 @@ export async function listPublicServices(slug) {
   }
 
   return listActiveServicesByTenant(tenant.id);
+}
+
+export async function listBusyPublicAppointmentsByDate(slug, date) {
+  const tenant = await getPublicTenantBySlug(slug);
+
+  if (!tenant) {
+    return [];
+  }
+
+  const startIso = new Date(`${date}T00:00:00`).toISOString();
+  const endIso = new Date(`${date}T23:59:59`).toISOString();
+
+  return listBusyAppointmentsByTenantAndDay(tenant.id, startIso, endIso);
 }
 
 export async function createPublicBooking({
