@@ -90,21 +90,15 @@ export async function resolveUserProfile(uid, email) {
     };
   }
 
-  console.log('Tentando localizar tenant user por UID...');
+  console.log('Tentando localizar tenant user por UID em:', `tenantUsers/${uid}`);
 
-  const tenantUsersReference = collection(db, 'tenantUsers');
-  const tenantUsersQuery = query(
-    tenantUsersReference,
-    where('uid', '==', uid),
-    limit(1)
-  );
+  const tenantUserReference = doc(db, 'tenantUsers', uid);
+  const tenantUserSnapshot = await getDoc(tenantUserReference);
 
-  const tenantUsersSnapshot = await getDocs(tenantUsersQuery);
+  console.log('Tenant user encontrado por UID?', tenantUserSnapshot.exists());
 
-  console.log('Tenant user encontrado?', !tenantUsersSnapshot.empty);
-
-  if (!tenantUsersSnapshot.empty) {
-    const tenantUser = tenantUsersSnapshot.docs[0].data();
+  if (tenantUserSnapshot.exists()) {
+    const tenantUser = tenantUserSnapshot.data();
 
     console.log('Documento tenant user:', tenantUser);
 
