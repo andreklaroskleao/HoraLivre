@@ -20,6 +20,11 @@ import {
   required,
   isValidPhone
 } from '../utils/validators.js';
+import {
+  normalizeBusinessHours,
+  generateBusinessTimeSlots,
+  isWithinBusinessHours
+} from '../utils/business-hours.js';
 
 const slug = getQueryParam('slug');
 
@@ -33,26 +38,6 @@ const availableTimesContainer = document.getElementById('available-times');
 
 let loadedServices = [];
 let loadedTenant = null;
-
-function generateBaseTimeSlots() {
-  const slots = [];
-  const startHour = 8;
-  const endHour = 19;
-
-  for (let hour = startHour; hour <= endHour; hour += 1) {
-    for (const minute of [0, 30]) {
-      if (hour === endHour && minute > 0) {
-        continue;
-      }
-
-      const formattedHour = String(hour).padStart(2, '0');
-      const formattedMinute = String(minute).padStart(2, '0');
-      slots.push(`${formattedHour}:${formattedMinute}`);
-    }
-  }
-
-  return slots;
-}
 
 function getSelectedService() {
   return loadedServices.find((service) => service.id === bookingServiceSelect.value) || null;
@@ -97,12 +82,20 @@ async function renderAvailableTimeSlots() {
   clearElement(availableTimesContainer);
   bookingTimeInput.value = '';
 
-  if (!selectedDate || !selectedService) {
+  if (!selectedDate || !selectedService || !loadedTenant) {
     return;
   }
 
+  const businessHours = normalizeBusinessHours(loadedTenant.businessHours || {});
   const busyAppointments = await listBusyPublicAppointmentsByDate(slug, selectedDate);
-  const slots = generateBaseTimeSlots();
+  const slots = generateBusinessTimeSlots(selectedDate, businessHours);
+
+  if (slots.length === 0) {
+    const info = document.createElement('div');
+    info.textContent = 'A empresa não atende nesta data.';
+    availableTimesContainer.appendChild(info);
+    return;
+  }
 
   slots.forEach((slot) => {
     const button = document.createElement('button');
@@ -111,6 +104,12 @@ async function renderAvailableTimeSlots() {
     button.className = 'time-button';
 
     const slotStartIso = new Date(`${selectedDate}T${slot}:00`).toISOString();
+
+    const isInsideBusinessHours = isWithinBusinessHours(
+      slot,
+      selectedService.durationMinutes,
+      businessHours
+    );
 
     const isBusy = busyAppointments.some((appointment) =>
       appointmentOverlaps({
@@ -121,7 +120,7 @@ async function renderAvailableTimeSlots() {
       })
     );
 
-    if (isBusy) {
+    if (!isInsideBusinessHours || isBusy) {
       button.classList.add('disabled');
       button.disabled = true;
     }
