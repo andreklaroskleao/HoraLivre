@@ -4,3 +4,39 @@
   display: grid;
   gap: 6px;
 }
+
+.appointment-card {
+  display: grid;
+  gap: 12px;
+}
+
+.appointment-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.appointment-card-body {
+  display: grid;
+  gap: 6px;
+}
+
+.appointment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
