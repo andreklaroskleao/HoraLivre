@@ -6,8 +6,6 @@ import {
   updateAppointment,
   updateAppointmentStatus
 } from '../services/appointment-service.js';
-import { listCustomersByTenant } from '../services/customer-service.js';
-import { listServicesByTenant } from '../services/service-service.js';
 import {
   formatCurrencyBRL,
   formatAppointmentStatus
@@ -18,7 +16,6 @@ import {
 } from '../utils/validators.js';
 import {
   clearElement,
-  createListItem,
   showFeedback
 } from '../utils/dom-utils.js';
 import { formatDateTimeForDisplay } from '../utils/date-utils.js';
@@ -41,35 +38,100 @@ export async function renderTenantAppointmentsList(elementId = 'appointments-lis
   clearElement(appointmentsListElement);
 
   if (appointments.length === 0) {
-    appointmentsListElement.appendChild(createListItem(`
+    const emptyItem = document.createElement('li');
+    emptyItem.innerHTML = `
       <strong>Nenhum agendamento cadastrado</strong><br>
       Os agendamentos do seu negócio aparecerão aqui.
-    `));
+    `;
+    appointmentsListElement.appendChild(emptyItem);
     return;
   }
 
   appointments.forEach((appointment) => {
-    appointmentsListElement.appendChild(createListItem(`
-      <strong>${appointment.customerName || '-'}</strong><br>
-      Serviço: ${appointment.serviceName || '-'}<br>
-      Início: ${formatDateTimeForDisplay(appointment.startAt)}<br>
-      Fim: ${formatDateTimeForDisplay(appointment.endAt)}<br>
-      Valor: ${formatCurrencyBRL(appointment.price || 0)}<br>
-      Status: ${formatAppointmentStatus(appointment.status)}<br>
-      Origem: ${appointment.source || '-'}<br>
-      Observações: ${appointment.notes || '-'}<br>
-      Identificador: ${appointment.id}
-    `));
+    const listItem = document.createElement('li');
+
+    listItem.innerHTML = `
+      <div class="appointment-card">
+        <div class="appointment-card-header">
+          <strong>${appointment.customerName || '-'}</strong>
+          <span class="status-badge">${formatAppointmentStatus(appointment.status)}</span>
+        </div>
+
+        <div class="appointment-card-body">
+          <div>Serviço: ${appointment.serviceName || '-'}</div>
+          <div>Início: ${formatDateTimeForDisplay(appointment.startAt)}</div>
+          <div>Fim: ${formatDateTimeForDisplay(appointment.endAt)}</div>
+          <div>Valor: ${formatCurrencyBRL(appointment.price || 0)}</div>
+          <div>Origem: ${appointment.source || '-'}</div>
+          <div>Observações: ${appointment.notes || '-'}</div>
+          <div>Identificador: ${appointment.id}</div>
+        </div>
+
+        <div class="appointment-actions">
+          <button class="button" type="button" data-appointment-id="${appointment.id}" data-status="confirmed">
+            Confirmar
+          </button>
+          <button class="button primary" type="button" data-appointment-id="${appointment.id}" data-status="completed">
+            Concluir
+          </button>
+          <button class="button" type="button" data-appointment-id="${appointment.id}" data-status="canceled">
+            Cancelar
+          </button>
+          <button class="button danger" type="button" data-appointment-id="${appointment.id}" data-status="no_show">
+            Faltou
+          </button>
+        </div>
+      </div>
+    `;
+
+    appointmentsListElement.appendChild(listItem);
   });
+
+  bindAppointmentStatusButtons(elementId);
 }
 
-export async function loadAppointmentFormDependencies() {
-  const [customers, services] = await Promise.all([
-    listCustomersByTenant(tenantId),
-    listServicesByTenant(tenantId)
-  ]);
+function bindAppointmentStatusButtons(elementId = 'appointments-list') {
+  const container = document.getElementById(elementId);
 
-  return { customers, services };
+  if (!container) {
+    return;
+  }
+
+  const buttons = container.querySelectorAll('[data-appointment-id][data-status]');
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const appointmentId = button.getAttribute('data-appointment-id');
+      const status = button.getAttribute('data-status');
+
+      try {
+        await setAppointmentStatus(appointmentId, status);
+        await renderTenantAppointmentsList(elementId);
+
+        const appointmentFeedbackElement = document.getElementById('appointment-feedback');
+
+        if (appointmentFeedbackElement) {
+          showFeedback(
+            appointmentFeedbackElement,
+            `Status alterado para ${formatAppointmentStatus(status)} com sucesso.`,
+            'success'
+          );
+        }
+      } catch (error) {
+        console.error(error);
+
+        const appointmentFeedbackElement = document.getElementById('appointment-feedback');
+
+        if (appointmentFeedbackElement) {
+          showFeedback(
+            appointmentFeedbackElement,
+            error.message || 'Não foi possível alterar o status do agendamento.',
+            'error'
+          );
+        }
+      }
+    });
+  });
 }
 
 export async function submitCreateAppointment(formElement, feedbackElement) {
@@ -194,14 +256,6 @@ export async function submitUpdateAppointment(appointmentId, formElement, feedba
   return true;
 }
 
-export async function setAppointmentStatus(appointmentId, status, feedbackElement = null) {
+export async function setAppointmentStatus(appointmentId, status) {
   await updateAppointmentStatus(appointmentId, status);
-
-  if (feedbackElement) {
-    showFeedback(
-      feedbackElement,
-      `Status alterado para ${formatAppointmentStatus(status)} com sucesso.`,
-      'success'
-    );
-  }
 }
