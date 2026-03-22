@@ -3,7 +3,8 @@ import { getTenantId } from '../state/session-store.js';
 import {
   listCustomersByTenant,
   createCustomer,
-  updateCustomer
+  updateCustomer,
+  deleteCustomer
 } from '../services/customer-service.js';
 import {
   formatCurrencyBRL,
@@ -25,6 +26,10 @@ if (!requireTenantUser()) {
 }
 
 const tenantId = getTenantId();
+
+export async function listTenantCustomersForSelect() {
+  return listCustomersByTenant(tenantId);
+}
 
 export async function renderTenantCustomersList(elementId = 'customers-list') {
   const customersListElement = document.getElementById(elementId);
@@ -75,17 +80,92 @@ export async function renderTenantCustomersList(elementId = 'customers-list') {
           <a class="button primary" href="${whatsappLink}" target="_blank" rel="noopener noreferrer">
             Chamar no WhatsApp
           </a>
+          <button class="button" type="button" data-customer-action="edit" data-customer-id="${customer.id}">
+            Editar
+          </button>
+          <button class="button danger" type="button" data-customer-action="delete" data-customer-id="${customer.id}">
+            Excluir
+          </button>
         </div>
       </div>
     `;
 
     customersListElement.appendChild(listItem);
   });
+
+  bindCustomerActions(customers);
 }
 
-export async function submitCreateCustomer(formElement, feedbackElement) {
+function bindCustomerActions(customers) {
+  const container = document.getElementById('customers-list');
+  const feedbackElement = document.getElementById('customer-feedback');
+
+  if (!container) {
+    return;
+  }
+
+  const buttons = container.querySelectorAll('[data-customer-action][data-customer-id]');
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const action = button.getAttribute('data-customer-action');
+      const customerId = button.getAttribute('data-customer-id');
+      const customer = customers.find((item) => item.id === customerId);
+
+      if (!customer) {
+        return;
+      }
+
+      try {
+        if (action === 'edit') {
+          fillCustomerForm(customer);
+          showFeedback(feedbackElement, 'Cliente carregado para edição.', 'success');
+          return;
+        }
+
+        if (action === 'delete') {
+          const shouldDelete = window.confirm(`Deseja excluir o cliente "${customer.name}"?`);
+
+          if (!shouldDelete) {
+            return;
+          }
+
+          await deleteCustomer(customerId);
+          resetCustomerForm();
+          await renderTenantCustomersList();
+          showFeedback(feedbackElement, 'Cliente excluído com sucesso.', 'success');
+        }
+      } catch (error) {
+        console.error(error);
+        showFeedback(feedbackElement, error.message || 'Não foi possível executar a ação no cliente.', 'error');
+      }
+    });
+  });
+}
+
+export function fillCustomerForm(customer) {
+  document.getElementById('customer-edit-id').value = customer.id || '';
+  document.querySelector('#customer-form [name="name"]').value = customer.name || '';
+  document.querySelector('#customer-form [name="phone"]').value = customer.phone || '';
+  document.querySelector('#customer-form [name="email"]').value = customer.email || '';
+  document.querySelector('#customer-form [name="notes"]').value = customer.notes || '';
+}
+
+export function resetCustomerForm() {
+  const form = document.getElementById('customer-form');
+  const editId = document.getElementById('customer-edit-id');
+
+  form?.reset();
+
+  if (editId) {
+    editId.value = '';
+  }
+}
+
+export async function submitSaveCustomer(formElement, feedbackElement) {
   const formData = new FormData(formElement);
 
+  const editId = document.getElementById('customer-edit-id')?.value?.trim() || '';
   const name = String(formData.get('name') || '').trim();
   const phone = String(formData.get('phone') || '').trim();
   const email = String(formData.get('email') || '').trim();
@@ -106,52 +186,30 @@ export async function submitCreateCustomer(formElement, feedbackElement) {
     return false;
   }
 
-  await createCustomer({
-    tenantId,
-    name,
-    phone,
-    email,
-    notes,
-    totalAppointments: 0,
-    totalSpent: 0,
-    lastAppointmentAt: null
-  });
+  if (editId) {
+    await updateCustomer(editId, {
+      name,
+      phone,
+      email,
+      notes
+    });
 
-  formElement.reset();
-  showFeedback(feedbackElement, 'Cliente cadastrado com sucesso.', 'success');
-  return true;
-}
+    showFeedback(feedbackElement, 'Cliente atualizado com sucesso.', 'success');
+  } else {
+    await createCustomer({
+      tenantId,
+      name,
+      phone,
+      email,
+      notes,
+      totalAppointments: 0,
+      totalSpent: 0,
+      lastAppointmentAt: null
+    });
 
-export async function submitUpdateCustomer(customerId, formElement, feedbackElement) {
-  const formData = new FormData(formElement);
-
-  const name = String(formData.get('name') || '').trim();
-  const phone = String(formData.get('phone') || '').trim();
-  const email = String(formData.get('email') || '').trim();
-  const notes = String(formData.get('notes') || '').trim();
-
-  if (!required(name)) {
-    showFeedback(feedbackElement, 'Nome do cliente é obrigatório.', 'error');
-    return false;
+    showFeedback(feedbackElement, 'Cliente cadastrado com sucesso.', 'success');
   }
 
-  if (!required(phone) || !isValidPhone(phone)) {
-    showFeedback(feedbackElement, 'Telefone inválido.', 'error');
-    return false;
-  }
-
-  if (email && !isValidEmail(email)) {
-    showFeedback(feedbackElement, 'E-mail inválido.', 'error');
-    return false;
-  }
-
-  await updateCustomer(customerId, {
-    name,
-    phone,
-    email,
-    notes
-  });
-
-  showFeedback(feedbackElement, 'Cliente atualizado com sucesso.', 'success');
+  resetCustomerForm();
   return true;
 }
