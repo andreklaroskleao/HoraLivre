@@ -74,7 +74,7 @@
           <h3>Dados da empresa</h3>
           <p class="muted">
             Edite os dados da empresa, incluindo slug da página pública, logo por URL externa
-            e expediente de atendimento.
+            e regras de disponibilidade.
           </p>
         </div>
 
@@ -116,7 +116,7 @@
             </label>
 
             <fieldset class="stack">
-              <legend>Expediente</legend>
+              <legend>Expediente padrão</legend>
 
               <label>
                 <span>Dias de atendimento</span>
@@ -154,6 +154,33 @@
               <label>
                 <span>Intervalo entre horários (minutos)</span>
                 <input id="company-form-slot-interval-minutes" type="number" min="5" step="5" required>
+              </label>
+            </fieldset>
+
+            <fieldset class="stack">
+              <legend>Feriados e datas fechadas</legend>
+
+              <label>
+                <span>Feriados (um por linha, formato AAAA-MM-DD)</span>
+                <textarea id="company-form-holidays" rows="5" placeholder="2026-01-01&#10;2026-12-25"></textarea>
+              </label>
+
+              <label>
+                <span>Datas indisponíveis (um por linha, formato AAAA-MM-DD)</span>
+                <textarea id="company-form-blocked-dates" rows="5" placeholder="2026-03-28&#10;2026-04-02"></textarea>
+              </label>
+            </fieldset>
+
+            <fieldset class="stack">
+              <legend>Expediente especial por data</legend>
+
+              <label>
+                <span>Regras especiais (um JSON por linha)</span>
+                <textarea
+                  id="company-form-special-dates"
+                  rows="8"
+                  placeholder='{"date":"2026-03-29","isClosed":true}&#10;{"date":"2026-03-30","openingTime":"10:00","closingTime":"16:00","lunchStartTime":"12:00","lunchEndTime":"13:00","slotIntervalMinutes":30}'
+                ></textarea>
               </label>
             </fieldset>
 
