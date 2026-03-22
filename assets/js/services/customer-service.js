@@ -1,13 +1,14 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   getDocs,
   limit,
   orderBy,
   query,
   updateDoc,
-  where,
-  doc
+  where
 } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 import { db } from '../config/firebase-init.js';
@@ -21,9 +22,9 @@ export async function listCustomersByTenant(tenantId) {
 
   const snapshot = await getDocs(customersQuery);
 
-  return snapshot.docs.map((docItem) => ({
-    id: docItem.id,
-    ...docItem.data()
+  return snapshot.docs.map((documentItem) => ({
+    id: documentItem.id,
+    ...documentItem.data()
   }));
 }
 
@@ -45,12 +46,17 @@ export async function createCustomer(data) {
 }
 
 export async function updateCustomer(customerId, data) {
-  const ref = doc(db, 'customers', customerId);
+  const reference = doc(db, 'customers', customerId);
 
-  await updateDoc(ref, {
+  await updateDoc(reference, {
     ...data,
     updatedAt: new Date().toISOString()
   });
+}
+
+export async function deleteCustomer(customerId) {
+  const reference = doc(db, 'customers', customerId);
+  await deleteDoc(reference);
 }
 
 export async function findCustomerByPhone(tenantId, phone) {
@@ -67,10 +73,10 @@ export async function findCustomerByPhone(tenantId, phone) {
     return null;
   }
 
-  const docItem = snapshot.docs[0];
+  const documentItem = snapshot.docs[0];
 
   return {
-    id: docItem.id,
-    ...docItem.data()
+    id: documentItem.id,
+    ...documentItem.data()
   };
 }
