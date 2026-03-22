@@ -6,24 +6,33 @@
   gap: 6px;
 }
 
-.appointment-card {
+.appointment-card,
+.service-card,
+.customer-card {
   display: grid;
   gap: 12px;
 }
 
-.appointment-card-header {
+.appointment-card-header,
+.service-card-header,
+.customer-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.appointment-card-body {
+.appointment-card-body,
+.service-card-body,
+.customer-card-body {
   display: grid;
   gap: 6px;
 }
 
-.appointment-actions {
+.appointment-actions,
+.service-actions,
+.customer-actions,
+.form-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -71,4 +80,9 @@
 .scroll-panel::-webkit-scrollbar-track {
   background: rgba(229, 231, 235, 0.7);
   border-radius: 999px;
+}
+
+.info-grid {
+  display: grid;
+  gap: 10px;
 }
