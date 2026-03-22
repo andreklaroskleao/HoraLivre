@@ -25,6 +25,8 @@ import {
   submitCreateAppointment
 } from './tenant-appointments.js';
 import { loadTenantReportsIntoPage } from './tenant-reports.js';
+import { listCustomersByTenant } from '../services/customer-service.js';
+import { listAppointmentsByTenant } from '../services/appointment-service.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -34,7 +36,7 @@ const tenantId = getTenantId();
 
 const logoutButton = document.getElementById('logout-button');
 const supportButton = document.getElementById('support-button');
-const publicPageLinkButton = document.querySelector('.sidebar-footer a.button');
+const publicPageLinkButton = document.getElementById('public-page-link');
 
 const serviceForm = document.getElementById('service-form');
 const customerForm = document.getElementById('customer-form');
@@ -46,7 +48,7 @@ const appointmentFeedback = document.getElementById('appointment-feedback');
 
 logoutButton?.addEventListener('click', async () => {
   await logoutUser();
-  window.location.href = 'login.html';
+  window.location.href = './login.html';
 });
 
 async function loadTenantData() {
@@ -67,17 +69,32 @@ async function loadTenantData() {
   setText('company-status', formatSubscriptionStatus(tenant.subscriptionStatus));
 
   if (publicPageLinkButton && tenant.slug) {
-    publicPageLinkButton.href = `agendar.html?slug=${tenant.slug}`;
+    publicPageLinkButton.href = `./agendar.html?slug=${tenant.slug}`;
   }
-
-  return tenant;
 }
 
 async function loadDashboardSummary() {
-  const billingRecords = await listBillingRecordsByTenant(tenantId);
-  const latestRecord = billingRecords[0] || null;
+  const [billingRecords, customers, appointments] = await Promise.all([
+    listBillingRecordsByTenant(tenantId),
+    listCustomersByTenant(tenantId),
+    listAppointmentsByTenant(tenantId)
+  ]);
 
-  setText('tenant-stat-billing', formatCurrencyBRL(latestRecord?.totalAmount || 0));
+  const latestBillingRecord = billingRecords[0] || null;
+  const todayDate = new Date().toISOString().slice(0, 10);
+
+  const todayAppointments = appointments.filter((appointment) =>
+    String(appointment.startAt || '').slice(0, 10) === todayDate
+  );
+
+  const completedAppointments = appointments.filter(
+    (appointment) => appointment.status === 'completed'
+  );
+
+  setText('tenant-stat-billing', formatCurrencyBRL(latestBillingRecord?.totalAmount || 0));
+  setText('tenant-stat-customers', String(customers.length));
+  setText('tenant-stat-today', String(todayAppointments.length));
+  setText('tenant-stat-completed', String(completedAppointments.length));
 }
 
 async function loadSupportButton() {
@@ -91,17 +108,6 @@ async function loadSupportButton() {
     settings.supportWhatsapp,
     settings.supportWhatsappMessage || 'Olá, preciso de ajuda com o HoraLivre.'
   );
-}
-
-async function loadTenantCounters() {
-  const customersListElement = document.getElementById('customers-list');
-  const appointmentsListElement = document.getElementById('appointments-list');
-
-  const customersCount = customersListElement?.children?.length || 0;
-  const appointmentsCount = appointmentsListElement?.children?.length || 0;
-
-  setText('tenant-stat-customers', customersCount > 0 ? String(customersCount) : '0');
-  setText('tenant-stat-today', appointmentsCount > 0 ? String(appointmentsCount) : '0');
 }
 
 serviceForm?.addEventListener('submit', async (event) => {
@@ -121,7 +127,7 @@ customerForm?.addEventListener('submit', async (event) => {
 
   if (success) {
     await renderTenantCustomersList();
-    await loadTenantCounters();
+    await loadDashboardSummary();
   }
 });
 
@@ -132,8 +138,10 @@ appointmentForm?.addEventListener('submit', async (event) => {
 
   if (success) {
     await renderTenantAppointmentsList();
-    await loadTenantReportsIntoPage();
-    await loadTenantCounters();
+    await loadTenantReportsIntoPage({
+      reportAppointmentsListElementId: 'report-appointments-list'
+    });
+    await loadDashboardSummary();
   }
 });
 
@@ -146,8 +154,9 @@ async function init() {
     await renderTenantServicesList();
     await renderTenantCustomersList();
     await renderTenantAppointmentsList();
-    await loadTenantReportsIntoPage();
-    await loadTenantCounters();
+    await loadTenantReportsIntoPage({
+      reportAppointmentsListElementId: 'report-appointments-list'
+    });
   } catch (error) {
     console.error(error);
   }
