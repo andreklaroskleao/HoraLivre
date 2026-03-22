@@ -55,6 +55,21 @@ export async function listBusyPublicAppointmentsByDate(slug, date) {
   return listBusyAppointmentsByTenantAndDay(tenant.id, startIso, endIso);
 }
 
+export function appointmentOverlaps({
+  slotStartIso,
+  slotDurationMinutes,
+  appointmentStartIso,
+  appointmentEndIso
+}) {
+  const slotStart = new Date(slotStartIso).getTime();
+  const slotEnd = slotStart + Number(slotDurationMinutes || 0) * 60000;
+
+  const appointmentStart = new Date(appointmentStartIso).getTime();
+  const appointmentEnd = new Date(appointmentEndIso).getTime();
+
+  return slotStart < appointmentEnd && slotEnd > appointmentStart;
+}
+
 export async function createPublicBooking({
   slug,
   customerName,
@@ -111,6 +126,25 @@ export async function createPublicBooking({
     startDate.getTime() + Number(durationMinutes || 0) * 60000
   );
   const endAt = endDate.toISOString();
+
+  const busyAppointments = await listBusyAppointmentsByTenantAndDay(
+    tenant.id,
+    new Date(`${date}T00:00:00`).toISOString(),
+    new Date(`${date}T23:59:59`).toISOString()
+  );
+
+  const hasConflict = busyAppointments.some((appointment) =>
+    appointmentOverlaps({
+      slotStartIso: startAt,
+      slotDurationMinutes: durationMinutes,
+      appointmentStartIso: appointment.startAt,
+      appointmentEndIso: appointment.endAt
+    })
+  );
+
+  if (hasConflict) {
+    throw new Error('Este horário não está mais disponível. Escolha outro horário.');
+  }
 
   return createAppointment({
     tenantId: tenant.id,
