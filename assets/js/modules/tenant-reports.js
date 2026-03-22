@@ -18,7 +18,9 @@ import {
 import {
   getMonthReference,
   getStartAndEndOfCurrentMonth,
-  formatDateTimeForDisplay
+  formatDateTimeForDisplay,
+  buildStartOfDayIsoFromDateInput,
+  buildEndOfDayIsoFromDateInput
 } from '../utils/date-utils.js';
 import {
   clearElement,
@@ -53,13 +55,16 @@ export async function loadTenantReportsIntoPage(options = {}) {
     return;
   }
 
-  const { startIso, endIso } = getStartAndEndOfCurrentMonth();
-  const monthReference = getMonthReference();
+  const defaultPeriod = getStartAndEndOfCurrentMonth();
+  const startIso = options.startIso || defaultPeriod.startIso;
+  const endIso = options.endIso || defaultPeriod.endIso;
+
   const billingSettings = await getBillingSettingsByTenant(tenantId);
   const completedAppointments = await countCompletedAppointments(tenantId, startIso, endIso);
   const appointments = await listAppointmentsByTenantAndPeriod(tenantId, startIso, endIso);
   const billingRecords = await listBillingRecordsByTenant(tenantId);
 
+  const monthReference = getMonthReference(new Date(startIso));
   const currentBillingRecord =
     billingRecords.find((record) => record.monthRef === monthReference) || null;
 
@@ -88,7 +93,7 @@ export async function loadTenantReportsIntoPage(options = {}) {
   if (appointments.length === 0) {
     reportAppointmentsListElement.appendChild(createListItem(`
       <strong>Nenhum agendamento no período</strong><br>
-      Os agendamentos do mês aparecerão aqui.
+      Os agendamentos do filtro atual aparecerão aqui.
     `));
     return;
   }
@@ -101,5 +106,37 @@ export async function loadTenantReportsIntoPage(options = {}) {
       Valor: ${formatCurrencyBRL(appointment.price || 0)}<br>
       Status: ${formatAppointmentStatus(appointment.status)}
     `));
+  });
+}
+
+export function bindReportFilters() {
+  const filterButton = document.getElementById('report-filter-button');
+  const resetButton = document.getElementById('report-filter-reset-button');
+  const startInput = document.getElementById('report-filter-start');
+  const endInput = document.getElementById('report-filter-end');
+
+  filterButton?.addEventListener('click', async () => {
+    const startIso = buildStartOfDayIsoFromDateInput(startInput?.value || '');
+    const endIso = buildEndOfDayIsoFromDateInput(endInput?.value || '');
+
+    await loadTenantReportsIntoPage({
+      startIso,
+      endIso,
+      reportAppointmentsListElementId: 'report-appointments-list'
+    });
+  });
+
+  resetButton?.addEventListener('click', async () => {
+    if (startInput) {
+      startInput.value = '';
+    }
+
+    if (endInput) {
+      endInput.value = '';
+    }
+
+    await loadTenantReportsIntoPage({
+      reportAppointmentsListElementId: 'report-appointments-list'
+    });
   });
 }
