@@ -15,16 +15,16 @@
       <div>
         <span class="badge">HoraLivre</span>
         <h1 class="sidebar-title">Painel do Cliente</h1>
-        <p class="sidebar-subtitle">Operação da empresa</p>
+        <p class="sidebar-subtitle">Tudo da sua empresa em um só lugar</p>
       </div>
 
       <nav class="nav-list">
-        <a class="nav-link active" href="#dashboard">Dashboard</a>
-        <a class="nav-link" href="#empresa">Empresa</a>
+        <a class="nav-link active" href="#dashboard">Resumo</a>
+        <a class="nav-link" href="#empresa">Minha empresa</a>
         <a class="nav-link" href="#servicos">Serviços</a>
-        <a class="nav-link" href="#clientes">Clientes Finais</a>
+        <a class="nav-link" href="#clientes">Clientes</a>
         <a class="nav-link" href="#agenda">Agenda</a>
-        <a class="nav-link" href="#relatorios">Relatórios</a>
+        <a class="nav-link" href="#relatorios">Cobrança</a>
       </nav>
 
       <div class="sidebar-footer">
@@ -36,16 +36,20 @@
     <main class="content">
       <header class="page-header">
         <div>
-          <p class="eyebrow">Área da empresa</p>
+          <p class="eyebrow">Painel da empresa</p>
           <h2 id="tenant-business-name">Minha Empresa</h2>
           <p class="muted">
-            Painel individual do cliente com empresa, serviços, clientes finais, agenda, relatórios,
-            cobrança e suporte via WhatsApp.
+            Use este painel para organizar serviços, clientes, agenda e cobrança.
           </p>
         </div>
       </header>
 
       <section id="dashboard" class="section">
+        <div class="section-heading">
+          <h3>Resumo rápido</h3>
+          <p class="muted">Veja os números mais importantes do seu período atual.</p>
+        </div>
+
         <div class="stats-grid">
           <article class="stat-card">
             <span class="stat-label">Agendamentos hoje</span>
@@ -58,12 +62,12 @@
           </article>
 
           <article class="stat-card">
-            <span class="stat-label">Clientes finais</span>
+            <span class="stat-label">Clientes cadastrados</span>
             <strong class="stat-value" id="tenant-stat-customers">0</strong>
           </article>
 
           <article class="stat-card">
-            <span class="stat-label">Valor previsto</span>
+            <span class="stat-label">Valor previsto no período</span>
             <strong class="stat-value" id="tenant-stat-billing">R$ 0,00</strong>
           </article>
         </div>
@@ -71,118 +75,186 @@
 
       <section id="empresa" class="section">
         <div class="section-heading">
-          <h3>Dados da empresa</h3>
+          <h3>Minha empresa</h3>
           <p class="muted">
-            Edite os dados da empresa, incluindo slug da página pública, logo por URL externa
-            e regras de disponibilidade.
+            Atualize os dados públicos e a disponibilidade de atendimento.
           </p>
         </div>
 
         <div class="card">
           <form id="company-form" class="stack">
-            <label>
-              <span>Nome da empresa</span>
-              <input id="company-form-business-name" type="text" required>
-            </label>
-
-            <label>
-              <span>Slug público</span>
-              <input id="company-form-slug" type="text" required>
-            </label>
-
-            <label>
-              <span>WhatsApp</span>
-              <input id="company-form-whatsapp" type="text" required>
-            </label>
-
-            <label>
-              <span>Descrição</span>
-              <input id="company-form-description" type="text">
-            </label>
-
-            <label>
-              <span>Logo URL</span>
-              <input id="company-form-logo-url" type="text">
-            </label>
-
-            <label>
-              <span>Instagram</span>
-              <input id="company-form-instagram" type="text">
-            </label>
-
-            <label>
-              <span>Endereço</span>
-              <input id="company-form-address" type="text">
-            </label>
-
-            <fieldset class="stack">
-              <legend>Expediente padrão</legend>
-
+            <div class="form-grid">
               <label>
-                <span>Dias de atendimento</span>
-                <select id="company-form-working-days" multiple size="7">
-                  <option value="0">Domingo</option>
-                  <option value="1">Segunda-feira</option>
-                  <option value="2">Terça-feira</option>
-                  <option value="3">Quarta-feira</option>
-                  <option value="4">Quinta-feira</option>
-                  <option value="5">Sexta-feira</option>
-                  <option value="6">Sábado</option>
-                </select>
+                <span>Nome da empresa</span>
+                <input id="company-form-business-name" type="text" required>
               </label>
 
               <label>
-                <span>Abertura</span>
-                <input id="company-form-opening-time" type="time" required>
+                <span>Slug da página pública</span>
+                <input id="company-form-slug" type="text" required>
+                <small class="field-help">Exemplo: barbearia-do-joao</small>
               </label>
 
               <label>
-                <span>Fechamento</span>
-                <input id="company-form-closing-time" type="time" required>
+                <span>WhatsApp</span>
+                <input id="company-form-whatsapp" type="text" required>
               </label>
 
               <label>
-                <span>Início do almoço</span>
-                <input id="company-form-lunch-start-time" type="time">
+                <span>Instagram</span>
+                <input id="company-form-instagram" type="text">
               </label>
 
-              <label>
-                <span>Fim do almoço</span>
-                <input id="company-form-lunch-end-time" type="time">
+              <label class="full-width">
+                <span>Descrição</span>
+                <input id="company-form-description" type="text">
               </label>
 
-              <label>
-                <span>Intervalo entre horários (minutos)</span>
-                <input id="company-form-slot-interval-minutes" type="number" min="5" step="5" required>
-              </label>
-            </fieldset>
-
-            <fieldset class="stack">
-              <legend>Feriados e datas fechadas</legend>
-
-              <label>
-                <span>Feriados (um por linha, formato AAAA-MM-DD)</span>
-                <textarea id="company-form-holidays" rows="5" placeholder="2026-01-01&#10;2026-12-25"></textarea>
+              <label class="full-width">
+                <span>Logo da empresa (URL)</span>
+                <input id="company-form-logo-url" type="text">
+                <small class="field-help">Você pode colar um link direto da imagem.</small>
               </label>
 
-              <label>
-                <span>Datas indisponíveis (um por linha, formato AAAA-MM-DD)</span>
-                <textarea id="company-form-blocked-dates" rows="5" placeholder="2026-03-28&#10;2026-04-02"></textarea>
+              <label class="full-width">
+                <span>Endereço</span>
+                <input id="company-form-address" type="text">
               </label>
-            </fieldset>
+            </div>
 
-            <fieldset class="stack">
-              <legend>Expediente especial por data</legend>
+            <div class="divider"></div>
 
-              <label>
-                <span>Regras especiais (um JSON por linha)</span>
-                <textarea
-                  id="company-form-special-dates"
-                  rows="8"
-                  placeholder='{"date":"2026-03-29","isClosed":true}&#10;{"date":"2026-03-30","openingTime":"10:00","closingTime":"16:00","lunchStartTime":"12:00","lunchEndTime":"13:00","slotIntervalMinutes":30}'
-                ></textarea>
-              </label>
-            </fieldset>
+            <div class="guided-section">
+              <div class="guided-section-header">
+                <h4>Expediente padrão</h4>
+                <p class="muted">Escolha os dias e horários em que sua empresa atende normalmente.</p>
+              </div>
+
+              <div>
+                <span class="field-label">Dias de atendimento</span>
+                <div id="working-days-chips" class="chip-group"></div>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  <span>Abertura</span>
+                  <input id="company-form-opening-time" type="time" required>
+                </label>
+
+                <label>
+                  <span>Fechamento</span>
+                  <input id="company-form-closing-time" type="time" required>
+                </label>
+
+                <label>
+                  <span>Início do almoço</span>
+                  <input id="company-form-lunch-start-time" type="time">
+                </label>
+
+                <label>
+                  <span>Fim do almoço</span>
+                  <input id="company-form-lunch-end-time" type="time">
+                </label>
+
+                <label>
+                  <span>Intervalo entre horários</span>
+                  <select id="company-form-slot-interval-minutes">
+                    <option value="15">15 minutos</option>
+                    <option value="20">20 minutos</option>
+                    <option value="30">30 minutos</option>
+                    <option value="60">60 minutos</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="guided-section">
+              <div class="guided-section-header">
+                <h4>Datas sem atendimento</h4>
+                <p class="muted">Adicione dias em que sua empresa não vai funcionar.</p>
+              </div>
+
+              <div class="inline-form">
+                <input id="holiday-date-input" type="date">
+                <button class="button" id="add-holiday-button" type="button">Adicionar feriado</button>
+              </div>
+              <div id="holiday-list" class="tag-list"></div>
+
+              <div class="inline-form top-gap">
+                <input id="blocked-date-input" type="date">
+                <button class="button" id="add-blocked-date-button" type="button">Adicionar data fechada</button>
+              </div>
+              <div id="blocked-date-list" class="tag-list"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="guided-section">
+              <div class="guided-section-header">
+                <h4>Expediente especial por data</h4>
+                <p class="muted">Use esta parte quando um dia tiver horário diferente do normal.</p>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  <span>Data especial</span>
+                  <input id="special-date-date" type="date">
+                </label>
+
+                <label>
+                  <span>Dia fechado?</span>
+                  <select id="special-date-is-closed">
+                    <option value="false">Não</option>
+                    <option value="true">Sim</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Abertura</span>
+                  <input id="special-date-opening-time" type="time">
+                </label>
+
+                <label>
+                  <span>Fechamento</span>
+                  <input id="special-date-closing-time" type="time">
+                </label>
+
+                <label>
+                  <span>Início do almoço</span>
+                  <input id="special-date-lunch-start-time" type="time">
+                </label>
+
+                <label>
+                  <span>Fim do almoço</span>
+                  <input id="special-date-lunch-end-time" type="time">
+                </label>
+
+                <label>
+                  <span>Intervalo entre horários</span>
+                  <select id="special-date-slot-interval-minutes">
+                    <option value="15">15 minutos</option>
+                    <option value="20">20 minutos</option>
+                    <option value="30">30 minutos</option>
+                    <option value="60">60 minutos</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button class="button" id="add-special-date-button" type="button">Adicionar regra especial</button>
+              </div>
+
+              <div id="special-date-list" class="tag-list"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="summary-card">
+              <h4>Resumo da disponibilidade</h4>
+              <div id="company-availability-summary" class="summary-list"></div>
+            </div>
 
             <button class="button primary" type="submit">Salvar dados da empresa</button>
             <p id="company-feedback" class="feedback"></p>
