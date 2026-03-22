@@ -12,7 +12,8 @@ import {
 import {
   listPublicServices,
   getPublicTenantBySlug,
-  createPublicBooking
+  createPublicBooking,
+  listBusyPublicAppointmentsByDate
 } from '../services/public-booking-service.js';
 import {
   required,
@@ -25,9 +26,106 @@ const servicesList = document.getElementById('public-services-list');
 const bookingForm = document.getElementById('public-booking-form');
 const bookingFeedback = document.getElementById('booking-feedback');
 const bookingServiceSelect = document.getElementById('booking-service');
+const bookingDateInput = document.getElementById('booking-date');
+const bookingTimeInput = document.getElementById('booking-time');
+const availableTimesContainer = document.getElementById('available-times');
 
 let loadedServices = [];
 let loadedTenant = null;
+
+function generateBaseTimeSlots() {
+  const slots = [];
+  const startHour = 8;
+  const endHour = 19;
+
+  for (let hour = startHour; hour <= endHour; hour += 1) {
+    for (const minute of [0, 30]) {
+      if (hour === endHour && minute > 0) {
+        continue;
+      }
+
+      const formattedHour = String(hour).padStart(2, '0');
+      const formattedMinute = String(minute).padStart(2, '0');
+      slots.push(`${formattedHour}:${formattedMinute}`);
+    }
+  }
+
+  return slots;
+}
+
+function renderBookingSuccessSummary({
+  customerName,
+  serviceName,
+  date,
+  time
+}) {
+  if (!loadedTenant) {
+    return;
+  }
+
+  const whatsappLink = buildWhatsAppLink(
+    loadedTenant.whatsapp || '',
+    `Olá, acabei de realizar um agendamento no HoraLivre. Meu nome é ${customerName}.`
+  );
+
+  bookingFeedback.innerHTML = `
+    <div class="card" style="margin-top: 12px;">
+      <strong>Agendamento criado com sucesso.</strong><br><br>
+      Empresa: ${loadedTenant.businessName || '-'}<br>
+      Cliente: ${customerName || '-'}<br>
+      Serviço: ${serviceName || '-'}<br>
+      Data: ${date || '-'}<br>
+      Horário: ${time || '-'}<br><br>
+      <a class="button primary" href="${whatsappLink}" target="_blank" rel="noopener noreferrer">
+        Falar com a empresa no WhatsApp
+      </a>
+    </div>
+  `;
+
+  bookingFeedback.className = 'feedback success';
+}
+
+async function renderAvailableTimeSlots() {
+  const selectedDate = bookingDateInput.value;
+
+  clearElement(availableTimesContainer);
+  bookingTimeInput.value = '';
+
+  if (!selectedDate) {
+    return;
+  }
+
+  const busyAppointments = await listBusyPublicAppointmentsByDate(slug, selectedDate);
+  const busyTimes = busyAppointments.map((appointment) =>
+    new Date(appointment.startAt).toISOString().slice(11, 16)
+  );
+
+  const slots = generateBaseTimeSlots();
+
+  slots.forEach((slot) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = slot;
+    button.className = 'time-button';
+
+    const isBusy = busyTimes.includes(slot);
+
+    if (isBusy) {
+      button.classList.add('disabled');
+      button.disabled = true;
+    }
+
+    button.addEventListener('click', () => {
+      const buttons = availableTimesContainer.querySelectorAll('.time-button');
+
+      buttons.forEach((currentButton) => currentButton.classList.remove('selected'));
+      button.classList.add('selected');
+      bookingTimeInput.value = slot;
+    });
+
+    availableTimesContainer.appendChild(button);
+  });
+}
 
 async function loadPublicTenant() {
   const tenant = await getPublicTenantBySlug(slug);
@@ -66,37 +164,18 @@ async function loadPublicServicesData() {
   });
 }
 
-function renderBookingSuccessSummary({
-  customerName,
-  serviceName,
-  date,
-  time
-}) {
-  if (!loadedTenant) {
-    return;
+bookingDateInput?.addEventListener('change', async () => {
+  try {
+    await renderAvailableTimeSlots();
+  } catch (error) {
+    console.error(error);
+    showFeedback(
+      bookingFeedback,
+      error.message || 'Não foi possível carregar os horários disponíveis.',
+      'error'
+    );
   }
-
-  const whatsappLink = buildWhatsAppLink(
-    loadedTenant.whatsapp || '',
-    `Olá, acabei de realizar um agendamento no HoraLivre. Meu nome é ${customerName}.`
-  );
-
-  bookingFeedback.innerHTML = `
-    <div class="card" style="margin-top: 12px;">
-      <strong>Agendamento criado com sucesso.</strong><br><br>
-      Empresa: ${loadedTenant.businessName || '-'}<br>
-      Cliente: ${customerName || '-'}<br>
-      Serviço: ${serviceName || '-'}<br>
-      Data: ${date || '-'}<br>
-      Horário: ${time || '-'}<br><br>
-      <a class="button primary" href="${whatsappLink}" target="_blank" rel="noopener noreferrer">
-        Falar com a empresa no WhatsApp
-      </a>
-    </div>
-  `;
-
-  bookingFeedback.className = 'feedback success';
-}
+});
 
 bookingForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -106,8 +185,8 @@ bookingForm?.addEventListener('submit', async (event) => {
     const customerPhone = document.getElementById('booking-phone').value.trim();
     const customerEmail = '';
     const serviceId = bookingServiceSelect.value;
-    const date = document.getElementById('booking-date').value;
-    const time = document.getElementById('booking-time').value;
+    const date = bookingDateInput.value;
+    const time = bookingTimeInput.value;
 
     if (!required(customerName) || !required(customerPhone) || !required(serviceId) || !required(date) || !required(time)) {
       showFeedback(bookingFeedback, 'Preencha todos os campos obrigatórios.', 'error');
@@ -140,6 +219,7 @@ bookingForm?.addEventListener('submit', async (event) => {
     });
 
     bookingForm.reset();
+    clearElement(availableTimesContainer);
 
     renderBookingSuccessSummary({
       customerName,
