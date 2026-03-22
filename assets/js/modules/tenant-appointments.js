@@ -24,6 +24,8 @@ import {
   buildStartOfDayIsoFromDateInput,
   buildEndOfDayIsoFromDateInput
 } from '../utils/date-utils.js';
+import { listTenantCustomersForSelect } from './tenant-customers.js';
+import { listServicesByTenant } from '../services/service-service.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -91,6 +93,9 @@ export async function renderTenantAppointmentsList(elementId = 'appointments-lis
           <button class="button danger" type="button" data-appointment-id="${appointment.id}" data-status="no_show">
             Faltou
           </button>
+          <button class="button" type="button" data-appointment-action="edit" data-appointment-id="${appointment.id}">
+            Editar
+          </button>
         </div>
       </div>
     `;
@@ -98,19 +103,20 @@ export async function renderTenantAppointmentsList(elementId = 'appointments-lis
     appointmentsListElement.appendChild(listItem);
   });
 
-  bindAppointmentStatusButtons(elementId, options);
+  bindAppointmentStatusButtons(appointments, elementId, options);
 }
 
-function bindAppointmentStatusButtons(elementId = 'appointments-list', options = {}) {
+function bindAppointmentStatusButtons(appointments, elementId = 'appointments-list', options = {}) {
   const container = document.getElementById(elementId);
 
   if (!container) {
     return;
   }
 
-  const buttons = container.querySelectorAll('[data-appointment-id][data-status]');
+  const statusButtons = container.querySelectorAll('[data-appointment-id][data-status]');
+  const editButtons = container.querySelectorAll('[data-appointment-action="edit"][data-appointment-id]');
 
-  buttons.forEach((button) => {
+  statusButtons.forEach((button) => {
     button.addEventListener('click', async () => {
       const appointmentId = button.getAttribute('data-appointment-id');
       const status = button.getAttribute('data-status');
@@ -143,6 +149,143 @@ function bindAppointmentStatusButtons(elementId = 'appointments-list', options =
       }
     });
   });
+
+  editButtons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const appointmentId = button.getAttribute('data-appointment-id');
+      const appointment = appointments.find((item) => item.id === appointmentId);
+      const appointmentFeedbackElement = document.getElementById('appointment-feedback');
+
+      if (!appointment) {
+        return;
+      }
+
+      await loadAppointmentFormDependencies();
+      fillAppointmentForm(appointment);
+      showFeedback(appointmentFeedbackElement, 'Agendamento carregado para edição.', 'success');
+    });
+  });
+}
+
+export async function loadAppointmentFormDependencies() {
+  const customerSelect = document.getElementById('appointment-customer-select');
+  const serviceSelect = document.getElementById('appointment-service-select');
+
+  const [customers, services] = await Promise.all([
+    listTenantCustomersForSelect(),
+    listServicesByTenant(tenantId)
+  ]);
+
+  if (customerSelect) {
+    customerSelect.innerHTML = '<option value="">Selecione um cliente</option>';
+
+    customers.forEach((customer) => {
+      const option = document.createElement('option');
+      option.value = customer.id;
+      option.dataset.customerName = customer.name || '';
+      option.textContent = `${customer.name} - ${customer.phone || ''}`;
+      customerSelect.appendChild(option);
+    });
+  }
+
+  if (serviceSelect) {
+    serviceSelect.innerHTML = '<option value="">Selecione um serviço</option>';
+
+    services.forEach((service) => {
+      const option = document.createElement('option');
+      option.value = service.id;
+      option.dataset.serviceName = service.name || '';
+      option.dataset.serviceDuration = String(service.durationMinutes || '');
+      option.dataset.servicePrice = String(service.price || '');
+      option.textContent = `${service.name} - ${formatCurrencyBRL(service.price || 0)}`;
+      serviceSelect.appendChild(option);
+    });
+  }
+}
+
+export function bindAppointmentFormSelects() {
+  const customerSelect = document.getElementById('appointment-customer-select');
+  const serviceSelect = document.getElementById('appointment-service-select');
+
+  customerSelect?.addEventListener('change', () => {
+    const selectedOption = customerSelect.options[customerSelect.selectedIndex];
+    document.querySelector('#appointment-form [name="customerId"]').value = customerSelect.value || '';
+    document.querySelector('#appointment-form [name="customerName"]').value =
+      selectedOption?.dataset?.customerName || '';
+  });
+
+  serviceSelect?.addEventListener('change', () => {
+    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    document.querySelector('#appointment-form [name="serviceId"]').value = serviceSelect.value || '';
+    document.querySelector('#appointment-form [name="serviceName"]').value =
+      selectedOption?.dataset?.serviceName || '';
+    document.querySelector('#appointment-form [name="durationMinutes"]').value =
+      selectedOption?.dataset?.serviceDuration || '';
+    document.querySelector('#appointment-form [name="price"]').value =
+      selectedOption?.dataset?.servicePrice || '';
+  });
+}
+
+export function fillAppointmentForm(appointment) {
+  document.getElementById('appointment-edit-id').value = appointment.id || '';
+
+  const customerSelect = document.getElementById('appointment-customer-select');
+  const serviceSelect = document.getElementById('appointment-service-select');
+
+  if (customerSelect) {
+    customerSelect.value = appointment.customerId || '';
+  }
+
+  if (serviceSelect) {
+    serviceSelect.value = appointment.serviceId || '';
+  }
+
+  document.querySelector('#appointment-form [name="customerId"]').value = appointment.customerId || '';
+  document.querySelector('#appointment-form [name="customerName"]').value = appointment.customerName || '';
+  document.querySelector('#appointment-form [name="serviceId"]').value = appointment.serviceId || '';
+  document.querySelector('#appointment-form [name="serviceName"]').value = appointment.serviceName || '';
+
+  const startDate = new Date(appointment.startAt);
+
+  document.querySelector('#appointment-form [name="date"]').value = startDate.toISOString().slice(0, 10);
+  document.querySelector('#appointment-form [name="time"]').value = startDate.toISOString().slice(11, 16);
+
+  const durationMinutes =
+    Math.round((new Date(appointment.endAt).getTime() - new Date(appointment.startAt).getTime()) / 60000);
+
+  document.querySelector('#appointment-form [name="durationMinutes"]').value = durationMinutes || '';
+  document.querySelector('#appointment-form [name="price"]').value = appointment.price || '';
+  document.querySelector('#appointment-form [name="status"]').value = appointment.status || 'scheduled';
+  document.querySelector('#appointment-form [name="notes"]').value = appointment.notes || '';
+}
+
+export function resetAppointmentForm() {
+  const form = document.getElementById('appointment-form');
+  const editId = document.getElementById('appointment-edit-id');
+
+  form?.reset();
+
+  if (editId) {
+    editId.value = '';
+  }
+
+  document.querySelector('#appointment-form [name="customerId"]').value = '';
+  document.querySelector('#appointment-form [name="customerName"]').value = '';
+  document.querySelector('#appointment-form [name="serviceId"]').value = '';
+  document.querySelector('#appointment-form [name="serviceName"]').value = '';
+
+  const customerSelect = document.getElementById('appointment-customer-select');
+  const serviceSelect = document.getElementById('appointment-service-select');
+
+  if (customerSelect) {
+    customerSelect.value = '';
+  }
+
+  if (serviceSelect) {
+    serviceSelect.value = '';
+  }
+
+  document.querySelector('#appointment-form [name="status"]').value = 'scheduled';
 }
 
 export function bindAppointmentFilters() {
@@ -174,71 +317,10 @@ export function bindAppointmentFilters() {
   });
 }
 
-export async function submitCreateAppointment(formElement, feedbackElement) {
+export async function submitSaveAppointment(formElement, feedbackElement) {
   const formData = new FormData(formElement);
 
-  const customerId = String(formData.get('customerId') || '').trim();
-  const customerName = String(formData.get('customerName') || '').trim();
-  const serviceId = String(formData.get('serviceId') || '').trim();
-  const serviceName = String(formData.get('serviceName') || '').trim();
-  const date = String(formData.get('date') || '').trim();
-  const time = String(formData.get('time') || '').trim();
-  const durationMinutes = Number(formData.get('durationMinutes') || 0);
-  const price = Number(formData.get('price') || 0);
-  const notes = String(formData.get('notes') || '').trim();
-
-  if (!required(customerName)) {
-    showFeedback(feedbackElement, 'Nome do cliente é obrigatório.', 'error');
-    return false;
-  }
-
-  if (!required(serviceName)) {
-    showFeedback(feedbackElement, 'Serviço é obrigatório.', 'error');
-    return false;
-  }
-
-  if (!required(date) || !required(time)) {
-    showFeedback(feedbackElement, 'Data e horário são obrigatórios.', 'error');
-    return false;
-  }
-
-  if (!Number.isInteger(durationMinutes) || durationMinutes <= 0) {
-    showFeedback(feedbackElement, 'Duração inválida.', 'error');
-    return false;
-  }
-
-  if (!isValidPrice(price)) {
-    showFeedback(feedbackElement, 'Valor inválido.', 'error');
-    return false;
-  }
-
-  const startAt = new Date(`${date}T${time}:00`).toISOString();
-  const startDate = new Date(startAt);
-  const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
-  const endAt = endDate.toISOString();
-
-  await createAppointment({
-    tenantId,
-    customerId: customerId || null,
-    customerName,
-    serviceId: serviceId || null,
-    serviceName,
-    startAt,
-    endAt,
-    price,
-    status: 'scheduled',
-    source: 'panel',
-    notes
-  });
-
-  formElement.reset();
-  showFeedback(feedbackElement, 'Agendamento criado com sucesso.', 'success');
-  return true;
-}
-
-export async function submitUpdateAppointment(appointmentId, formElement, feedbackElement) {
-  const formData = new FormData(formElement);
-
+  const editId = document.getElementById('appointment-edit-id')?.value?.trim() || '';
   const customerId = String(formData.get('customerId') || '').trim();
   const customerName = String(formData.get('customerName') || '').trim();
   const serviceId = String(formData.get('serviceId') || '').trim();
@@ -251,7 +333,7 @@ export async function submitUpdateAppointment(appointmentId, formElement, feedba
   const status = String(formData.get('status') || 'scheduled').trim();
 
   if (!required(customerName)) {
-    showFeedback(feedbackElement, 'Nome do cliente é obrigatório.', 'error');
+    showFeedback(feedbackElement, 'Cliente é obrigatório.', 'error');
     return false;
   }
 
@@ -280,19 +362,39 @@ export async function submitUpdateAppointment(appointmentId, formElement, feedba
   const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
   const endAt = endDate.toISOString();
 
-  await updateAppointment(appointmentId, {
-    customerId: customerId || null,
-    customerName,
-    serviceId: serviceId || null,
-    serviceName,
-    startAt,
-    endAt,
-    price,
-    status,
-    notes
-  });
+  if (editId) {
+    await updateAppointment(editId, {
+      customerId: customerId || null,
+      customerName,
+      serviceId: serviceId || null,
+      serviceName,
+      startAt,
+      endAt,
+      price,
+      status,
+      notes
+    });
 
-  showFeedback(feedbackElement, 'Agendamento atualizado com sucesso.', 'success');
+    showFeedback(feedbackElement, 'Agendamento atualizado com sucesso.', 'success');
+  } else {
+    await createAppointment({
+      tenantId,
+      customerId: customerId || null,
+      customerName,
+      serviceId: serviceId || null,
+      serviceName,
+      startAt,
+      endAt,
+      price,
+      status,
+      source: 'panel',
+      notes
+    });
+
+    showFeedback(feedbackElement, 'Agendamento criado com sucesso.', 'success');
+  }
+
+  resetAppointmentForm();
   return true;
 }
 
