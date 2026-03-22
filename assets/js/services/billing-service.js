@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -14,19 +15,39 @@ import {
 import { db } from '../config/firebase-init.js';
 
 export async function getBillingSettingsByTenant(tenantId) {
+  const directReference = doc(db, 'billingSettings', `billing_${tenantId}`);
+  const directSnapshot = await getDoc(directReference);
+
+  if (directSnapshot.exists()) {
+    return {
+      id: directSnapshot.id,
+      ...directSnapshot.data()
+    };
+  }
+
+  const legacyReference = doc(db, 'billingSettings', `billing_${tenantId.replace('tenant_', 'tenant_')}`);
+  const legacySnapshot = await getDoc(legacyReference);
+
+  if (legacySnapshot.exists()) {
+    return {
+      id: legacySnapshot.id,
+      ...legacySnapshot.data()
+    };
+  }
+
   const settingsQuery = query(
     collection(db, 'billingSettings'),
     where('tenantId', '==', tenantId),
     limit(1)
   );
 
-  const snapshot = await getDocs(settingsQuery);
+  const querySnapshot = await getDocs(settingsQuery);
 
-  if (snapshot.empty) {
+  if (querySnapshot.empty) {
     return null;
   }
 
-  const documentItem = snapshot.docs[0];
+  const documentItem = querySnapshot.docs[0];
 
   return {
     id: documentItem.id,
@@ -158,12 +179,17 @@ export function calculateBillingForPeriod({
   fixedMonthlyPrice,
   pricePerExecutedService
 }) {
-  if (billingMode === 'fixed_plan') {
-    return Number(fixedMonthlyPrice || 0);
+  const normalizedBillingMode = String(billingMode || '').trim();
+  const normalizedCompletedAppointments = Number(completedAppointments || 0);
+  const normalizedFixedMonthlyPrice = Number(fixedMonthlyPrice || 0);
+  const normalizedPricePerExecutedService = Number(pricePerExecutedService || 0);
+
+  if (normalizedBillingMode === 'fixed_plan') {
+    return normalizedFixedMonthlyPrice;
   }
 
-  if (billingMode === 'per_service') {
-    return Number(completedAppointments || 0) * Number(pricePerExecutedService || 0);
+  if (normalizedBillingMode === 'per_service') {
+    return normalizedCompletedAppointments * normalizedPricePerExecutedService;
   }
 
   return 0;
