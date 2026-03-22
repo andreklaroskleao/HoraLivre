@@ -1,6 +1,7 @@
 #services-list li,
 #customers-list li,
-#appointments-list li {
+#appointments-list li,
+#report-appointments-list li {
   display: grid;
   gap: 6px;
 }
@@ -39,4 +40,35 @@
   color: var(--primary);
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.filter-bar label {
+  min-width: 180px;
+}
+
+.scroll-panel {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.scroll-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scroll-panel::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.5);
+  border-radius: 999px;
+}
+
+.scroll-panel::-webkit-scrollbar-track {
+  background: rgba(229, 231, 235, 0.7);
+  border-radius: 999px;
 }
