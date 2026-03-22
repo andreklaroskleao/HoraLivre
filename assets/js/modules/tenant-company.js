@@ -1,7 +1,7 @@
 import { requireTenantUser } from '../utils/guards.js';
 import { getTenantId } from '../state/session-store.js';
 import { logoutUser } from '../services/auth-service.js';
-import { getTenantById } from '../services/tenant-service.js';
+import { getTenantById, updateTenant } from '../services/tenant-service.js';
 import { getPlatformSettings } from '../services/admin-service.js';
 import {
   getBillingSettingsByTenant,
@@ -15,10 +15,11 @@ import {
   formatSubscriptionStatus,
   buildWhatsAppLink
 } from '../utils/formatters.js';
-import { setText } from '../utils/dom-utils.js';
+import { setText, showFeedback } from '../utils/dom-utils.js';
 import {
   renderTenantServicesList,
-  submitCreateService
+  submitSaveService,
+  resetServiceForm
 } from './tenant-services.js';
 import {
   renderTenantCustomersList,
@@ -39,6 +40,12 @@ import {
   countCompletedAppointments
 } from '../services/appointment-service.js';
 import { getStartAndEndOfCurrentMonth } from '../utils/date-utils.js';
+import {
+  required,
+  isValidSlug,
+  isValidPhone,
+  isValidUrl
+} from '../utils/validators.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -50,13 +57,16 @@ const logoutButton = document.getElementById('logout-button');
 const supportButton = document.getElementById('support-button');
 const publicPageLinkButton = document.getElementById('public-page-link');
 
+const companyForm = document.getElementById('company-form');
 const serviceForm = document.getElementById('service-form');
 const customerForm = document.getElementById('customer-form');
 const appointmentForm = document.getElementById('appointment-form');
 
+const companyFeedback = document.getElementById('company-feedback');
 const serviceFeedback = document.getElementById('service-feedback');
 const customerFeedback = document.getElementById('customer-feedback');
 const appointmentFeedback = document.getElementById('appointment-feedback');
+const serviceCancelEditButton = document.getElementById('service-cancel-edit-button');
 
 function resolveEffectiveBillingMode(tenant, billingSettings, plan) {
   return (
@@ -90,6 +100,11 @@ logoutButton?.addEventListener('click', async () => {
   window.location.href = './login.html';
 });
 
+serviceCancelEditButton?.addEventListener('click', () => {
+  resetServiceForm();
+  showFeedback(serviceFeedback, 'Edição cancelada.', 'success');
+});
+
 async function loadTenantData() {
   const tenant = await getTenantById(tenantId);
 
@@ -106,6 +121,14 @@ async function loadTenantData() {
   setText('company-plan', tenant.planId || '-');
   setText('company-billing-mode', formatBillingMode(tenant.billingMode));
   setText('company-status', formatSubscriptionStatus(tenant.subscriptionStatus));
+
+  document.getElementById('company-form-business-name').value = tenant.businessName || '';
+  document.getElementById('company-form-slug').value = tenant.slug || '';
+  document.getElementById('company-form-whatsapp').value = tenant.whatsapp || '';
+  document.getElementById('company-form-description').value = tenant.description || '';
+  document.getElementById('company-form-logo-url').value = tenant.logoUrl || '';
+  document.getElementById('company-form-instagram').value = tenant.instagram || '';
+  document.getElementById('company-form-address').value = tenant.address || '';
 
   if (publicPageLinkButton && tenant.slug) {
     publicPageLinkButton.href = `./agendar.html?slug=${tenant.slug}`;
@@ -163,10 +186,60 @@ async function loadSupportButton() {
   );
 }
 
+companyForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  try {
+    const businessName = document.getElementById('company-form-business-name').value.trim();
+    const slug = document.getElementById('company-form-slug').value.trim();
+    const whatsapp = document.getElementById('company-form-whatsapp').value.trim();
+    const description = document.getElementById('company-form-description').value.trim();
+    const logoUrl = document.getElementById('company-form-logo-url').value.trim();
+    const instagram = document.getElementById('company-form-instagram').value.trim();
+    const address = document.getElementById('company-form-address').value.trim();
+
+    if (!required(businessName)) {
+      showFeedback(companyFeedback, 'Nome da empresa é obrigatório.', 'error');
+      return;
+    }
+
+    if (!required(slug) || !isValidSlug(slug)) {
+      showFeedback(companyFeedback, 'Slug inválido. Use letras minúsculas, números e hífen.', 'error');
+      return;
+    }
+
+    if (!required(whatsapp) || !isValidPhone(whatsapp)) {
+      showFeedback(companyFeedback, 'WhatsApp inválido.', 'error');
+      return;
+    }
+
+    if (logoUrl && !isValidUrl(logoUrl)) {
+      showFeedback(companyFeedback, 'Logo URL inválida.', 'error');
+      return;
+    }
+
+    await updateTenant(tenantId, {
+      businessName,
+      slug,
+      whatsapp,
+      description,
+      logoUrl,
+      instagram,
+      address
+    });
+
+    await loadTenantData();
+    showFeedback(companyFeedback, 'Dados da empresa atualizados com sucesso.', 'success');
+  } catch (error) {
+    console.error(error);
+    showFeedback(companyFeedback, error.message || 'Não foi possível atualizar a empresa.', 'error');
+  }
+});
+
 serviceForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const success = await submitCreateService(serviceForm, serviceFeedback);
+  const success = await submitSaveService(serviceForm, serviceFeedback);
 
   if (success) {
     await renderTenantServicesList();
