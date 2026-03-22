@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -41,6 +42,35 @@ export async function listAppointmentsByTenantAndPeriod(tenantId, startIso, endI
     id: documentItem.id,
     ...documentItem.data()
   }));
+}
+
+export async function listAppointmentsByCustomer(customerId) {
+  const appointmentsQuery = query(
+    collection(db, 'appointments'),
+    where('customerId', '==', customerId),
+    orderBy('startAt', 'asc')
+  );
+
+  const snapshot = await getDocs(appointmentsQuery);
+
+  return snapshot.docs.map((documentItem) => ({
+    id: documentItem.id,
+    ...documentItem.data()
+  }));
+}
+
+export async function getAppointmentById(appointmentId) {
+  const reference = doc(db, 'appointments', appointmentId);
+  const snapshot = await getDoc(reference);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return {
+    id: snapshot.id,
+    ...snapshot.data()
+  };
 }
 
 export async function listBusyAppointmentsByTenantAndDay(tenantId, startIso, endIso) {
@@ -101,4 +131,28 @@ export async function sumCompletedAppointmentsAmount(tenantId, startIso, endIso)
   return appointments
     .filter((appointment) => appointment.status === 'completed')
     .reduce((total, appointment) => total + Number(appointment.price || 0), 0);
+}
+
+export async function calculateCustomerStatsFromAppointments(customerId) {
+  const appointments = await listAppointmentsByCustomer(customerId);
+
+  const completedAppointments = appointments.filter(
+    (appointment) => appointment.status === 'completed'
+  );
+
+  const totalAppointments = completedAppointments.length;
+  const totalSpent = completedAppointments.reduce(
+    (total, appointment) => total + Number(appointment.price || 0),
+    0
+  );
+
+  const lastAppointmentAt = completedAppointments.length > 0
+    ? completedAppointments[completedAppointments.length - 1].startAt
+    : null;
+
+  return {
+    totalAppointments,
+    totalSpent,
+    lastAppointmentAt
+  };
 }
