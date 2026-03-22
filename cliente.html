@@ -73,7 +73,8 @@
         <div class="section-heading">
           <h3>Dados da empresa</h3>
           <p class="muted">
-            Edite os dados da empresa, incluindo slug da página pública e logo por URL externa.
+            Edite os dados da empresa, incluindo slug da página pública, logo por URL externa
+            e expediente de atendimento.
           </p>
         </div>
 
@@ -113,6 +114,48 @@
               <span>Endereço</span>
               <input id="company-form-address" type="text">
             </label>
+
+            <fieldset class="stack">
+              <legend>Expediente</legend>
+
+              <label>
+                <span>Dias de atendimento</span>
+                <select id="company-form-working-days" multiple size="7">
+                  <option value="0">Domingo</option>
+                  <option value="1">Segunda-feira</option>
+                  <option value="2">Terça-feira</option>
+                  <option value="3">Quarta-feira</option>
+                  <option value="4">Quinta-feira</option>
+                  <option value="5">Sexta-feira</option>
+                  <option value="6">Sábado</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Abertura</span>
+                <input id="company-form-opening-time" type="time" required>
+              </label>
+
+              <label>
+                <span>Fechamento</span>
+                <input id="company-form-closing-time" type="time" required>
+              </label>
+
+              <label>
+                <span>Início do almoço</span>
+                <input id="company-form-lunch-start-time" type="time">
+              </label>
+
+              <label>
+                <span>Fim do almoço</span>
+                <input id="company-form-lunch-end-time" type="time">
+              </label>
+
+              <label>
+                <span>Intervalo entre horários (minutos)</span>
+                <input id="company-form-slot-interval-minutes" type="number" min="5" step="5" required>
+              </label>
+            </fieldset>
 
             <button class="button primary" type="submit">Salvar dados da empresa</button>
             <p id="company-feedback" class="feedback"></p>
@@ -299,11 +342,8 @@
               <input name="notes" type="text">
             </label>
 
-            <div class="form-actions">
-              <button class="button primary" type="submit">Salvar agendamento</button>
-              <button class="button" id="appointment-cancel-edit-button" type="button">Cancelar edição</button>
-            </div>
-
+            <button class="button primary" type="submit">Salvar agendamento</button>
+            <button class="button" id="appointment-cancel-edit-button" type="button">Cancelar edição</button>
             <p id="appointment-feedback" class="feedback"></p>
           </form>
 
