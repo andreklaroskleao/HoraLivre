@@ -7,6 +7,38 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 import { db } from '../config/firebase-init.js';
+import { listTenants } from './tenant-service.js';
+import { getBillingSettingsByTenant, calculateBillingForPeriod } from './billing-service.js';
+import { getPlanById } from './plan-service.js';
+import { countCompletedAppointments } from './appointment-service.js';
+import { getStartAndEndOfCurrentMonth } from '../utils/date-utils.js';
+
+function resolveEffectiveBillingMode(tenant, billingSettings, plan) {
+  return (
+    billingSettings?.billingMode ||
+    tenant?.billingMode ||
+    plan?.billingMode ||
+    'free'
+  );
+}
+
+function resolveEffectiveFixedPrice(tenant, billingSettings, plan) {
+  return Number(
+    billingSettings?.fixedMonthlyPrice ??
+    plan?.price ??
+    tenant?.fixedMonthlyPrice ??
+    0
+  );
+}
+
+function resolveEffectiveUnitPrice(tenant, billingSettings, plan) {
+  return Number(
+    billingSettings?.pricePerExecutedService ??
+    plan?.pricePerExecutedService ??
+    tenant?.pricePerExecutedService ??
+    0
+  );
+}
 
 export async function getPlatformSettings() {
   const reference = doc(db, 'platformSettings', 'main');
@@ -36,8 +68,8 @@ export async function savePlatformSettings(data) {
 }
 
 export async function getAdminDashboardMetrics() {
-  const tenantsSnapshot = await getDocs(collection(db, 'tenants'));
-  const billingSnapshot = await getDocs(collection(db, 'billingRecords'));
+  const tenants = await listTenants();
+  const { startIso, endIso } = getStartAndEndOfCurrentMonth();
 
   let trialCount = 0;
   let activeCount = 0;
@@ -45,9 +77,7 @@ export async function getAdminDashboardMetrics() {
   let totalRevenue = 0;
   let totalCompleted = 0;
 
-  tenantsSnapshot.forEach((documentItem) => {
-    const tenant = documentItem.data();
-
+  for (const tenant of tenants) {
     if (tenant.subscriptionStatus === 'trial') {
       trialCount += 1;
     }
@@ -59,17 +89,28 @@ export async function getAdminDashboardMetrics() {
     if (tenant.subscriptionStatus === 'blocked' || tenant.isBlocked === true) {
       blockedCount += 1;
     }
-  });
 
-  billingSnapshot.forEach((documentItem) => {
-    const billingRecord = documentItem.data();
+    const plan = tenant.planId ? await getPlanById(tenant.planId) : null;
+    const billingSettings = await getBillingSettingsByTenant(tenant.id);
+    const completedAppointments = await countCompletedAppointments(tenant.id, startIso, endIso);
 
-    totalRevenue += Number(billingRecord.totalAmount || 0);
-    totalCompleted += Number(billingRecord.completedAppointments || 0);
-  });
+    const effectiveBillingMode = resolveEffectiveBillingMode(tenant, billingSettings, plan);
+    const effectiveFixedPrice = resolveEffectiveFixedPrice(tenant, billingSettings, plan);
+    const effectiveUnitPrice = resolveEffectiveUnitPrice(tenant, billingSettings, plan);
+
+    const totalAmount = calculateBillingForPeriod({
+      billingMode: effectiveBillingMode,
+      completedAppointments,
+      fixedMonthlyPrice: effectiveFixedPrice,
+      pricePerExecutedService: effectiveUnitPrice
+    });
+
+    totalCompleted += completedAppointments;
+    totalRevenue += totalAmount;
+  }
 
   return {
-    tenants: tenantsSnapshot.size,
+    tenants: tenants.length,
     trial: trialCount,
     active: activeCount,
     blocked: blockedCount,
