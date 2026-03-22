@@ -5,7 +5,8 @@ import {
   listAppointmentsByTenantAndPeriod,
   createAppointment,
   updateAppointment,
-  updateAppointmentStatus
+  updateAppointmentStatus,
+  getAppointmentById
 } from '../services/appointment-service.js';
 import {
   formatCurrencyBRL,
@@ -26,6 +27,7 @@ import {
 } from '../utils/date-utils.js';
 import { listTenantCustomersForSelect } from './tenant-customers.js';
 import { listServicesByTenant } from '../services/service-service.js';
+import { syncCustomerStats } from '../services/customer-stats-service.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -122,7 +124,14 @@ function bindAppointmentStatusButtons(appointments, elementId = 'appointments-li
       const status = button.getAttribute('data-status');
 
       try {
+        const appointment = await getAppointmentById(appointmentId);
+
         await setAppointmentStatus(appointmentId, status);
+
+        if (appointment?.customerId) {
+          await syncCustomerStats(appointment.customerId);
+        }
+
         await renderTenantAppointmentsList(elementId, options);
 
         const appointmentFeedbackElement = document.getElementById('appointment-feedback');
@@ -363,6 +372,8 @@ export async function submitSaveAppointment(formElement, feedbackElement) {
   const endAt = endDate.toISOString();
 
   if (editId) {
+    const previousAppointment = await getAppointmentById(editId);
+
     await updateAppointment(editId, {
       customerId: customerId || null,
       customerName,
@@ -375,9 +386,19 @@ export async function submitSaveAppointment(formElement, feedbackElement) {
       notes
     });
 
+    if (previousAppointment?.customerId) {
+      await syncCustomerStats(previousAppointment.customerId);
+    }
+
+    if (customerId && customerId !== previousAppointment?.customerId) {
+      await syncCustomerStats(customerId);
+    } else if (customerId) {
+      await syncCustomerStats(customerId);
+    }
+
     showFeedback(feedbackElement, 'Agendamento atualizado com sucesso.', 'success');
   } else {
-    await createAppointment({
+    const createdAppointment = await createAppointment({
       tenantId,
       customerId: customerId || null,
       customerName,
@@ -390,6 +411,10 @@ export async function submitSaveAppointment(formElement, feedbackElement) {
       source: 'panel',
       notes
     });
+
+    if (customerId) {
+      await syncCustomerStats(customerId);
+    }
 
     showFeedback(feedbackElement, 'Agendamento criado com sucesso.', 'success');
   }
