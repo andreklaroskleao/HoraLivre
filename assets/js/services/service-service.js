@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDocs,
   orderBy,
@@ -20,9 +21,9 @@ export async function listServicesByTenant(tenantId) {
 
   const snapshot = await getDocs(servicesQuery);
 
-  return snapshot.docs.map((docItem) => ({
-    id: docItem.id,
-    ...docItem.data()
+  return snapshot.docs.map((documentItem) => ({
+    id: documentItem.id,
+    ...documentItem.data()
   }));
 }
 
@@ -36,9 +37,9 @@ export async function listActiveServicesByTenant(tenantId) {
 
   const snapshot = await getDocs(servicesQuery);
 
-  return snapshot.docs.map((docItem) => ({
-    id: docItem.id,
-    ...docItem.data()
+  return snapshot.docs.map((documentItem) => ({
+    id: documentItem.id,
+    ...documentItem.data()
   }));
 }
 
@@ -58,19 +59,24 @@ export async function createService(data) {
 }
 
 export async function updateService(serviceId, data) {
-  const ref = doc(db, 'services', serviceId);
+  const reference = doc(db, 'services', serviceId);
 
-  await updateDoc(ref, {
+  await updateDoc(reference, {
     ...data,
     updatedAt: new Date().toISOString()
   });
 }
 
 export async function toggleServiceActive(serviceId, isActive) {
-  const ref = doc(db, 'services', serviceId);
+  const reference = doc(db, 'services', serviceId);
 
-  await updateDoc(ref, {
+  await updateDoc(reference, {
     isActive: Boolean(isActive),
     updatedAt: new Date().toISOString()
   });
+}
+
+export async function deleteService(serviceId) {
+  const reference = doc(db, 'services', serviceId);
+  await deleteDoc(reference);
 }
