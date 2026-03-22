@@ -5,7 +5,11 @@ import {
   createCustomer,
   updateCustomer
 } from '../services/customer-service.js';
-import { formatCurrencyBRL, formatPhone } from '../utils/formatters.js';
+import {
+  formatCurrencyBRL,
+  formatPhone,
+  buildWhatsAppLink
+} from '../utils/formatters.js';
 import {
   required,
   isValidPhone,
@@ -13,7 +17,6 @@ import {
 } from '../utils/validators.js';
 import {
   clearElement,
-  createListItem,
   showFeedback
 } from '../utils/dom-utils.js';
 
@@ -35,24 +38,48 @@ export async function renderTenantCustomersList(elementId = 'customers-list') {
   clearElement(customersListElement);
 
   if (customers.length === 0) {
-    customersListElement.appendChild(createListItem(`
+    const listItem = document.createElement('li');
+    listItem.innerHTML = `
       <strong>Nenhum cliente final cadastrado</strong><br>
       Os clientes do seu negócio aparecerão aqui.
-    `));
+    `;
+    customersListElement.appendChild(listItem);
     return;
   }
 
   customers.forEach((customer) => {
-    customersListElement.appendChild(createListItem(`
-      <strong>${customer.name}</strong><br>
-      Telefone: ${formatPhone(customer.phone || '-')}<br>
-      E-mail: ${customer.email || '-'}<br>
-      Total de atendimentos: ${customer.totalAppointments || 0}<br>
-      Total gasto: ${formatCurrencyBRL(customer.totalSpent || 0)}<br>
-      Último atendimento: ${customer.lastAppointmentAt || '-'}<br>
-      Observações: ${customer.notes || '-'}<br>
-      Identificador: ${customer.id}
-    `));
+    const whatsappLink = buildWhatsAppLink(
+      customer.phone || '',
+      `Olá ${customer.name || ''}, estou entrando em contato pela sua empresa no HoraLivre.`
+    );
+
+    const listItem = document.createElement('li');
+
+    listItem.innerHTML = `
+      <div class="customer-card">
+        <div class="customer-card-header">
+          <strong>${customer.name}</strong>
+        </div>
+
+        <div class="customer-card-body">
+          <div>Telefone: ${formatPhone(customer.phone || '-')}</div>
+          <div>E-mail: ${customer.email || '-'}</div>
+          <div>Total de atendimentos: ${customer.totalAppointments || 0}</div>
+          <div>Total gasto: ${formatCurrencyBRL(customer.totalSpent || 0)}</div>
+          <div>Último atendimento: ${customer.lastAppointmentAt || '-'}</div>
+          <div>Observações: ${customer.notes || '-'}</div>
+          <div>Identificador: ${customer.id}</div>
+        </div>
+
+        <div class="customer-actions">
+          <a class="button primary" href="${whatsappLink}" target="_blank" rel="noopener noreferrer">
+            Chamar no WhatsApp
+          </a>
+        </div>
+      </div>
+    `;
+
+    customersListElement.appendChild(listItem);
   });
 }
 
