@@ -1,8 +1,23 @@
 import { getQueryParam } from '../utils/router.js';
-import { setText, showFeedback, clearElement } from '../utils/dom-utils.js';
-import { formatCurrencyBRL, formatPhone } from '../utils/formatters.js';
-import { listPublicServices, getPublicTenantBySlug, createPublicBooking } from '../services/public-booking-service.js';
-import { required, isValidPhone } from '../utils/validators.js';
+import {
+  setText,
+  showFeedback,
+  clearElement
+} from '../utils/dom-utils.js';
+import {
+  formatCurrencyBRL,
+  formatPhone,
+  buildWhatsAppLink
+} from '../utils/formatters.js';
+import {
+  listPublicServices,
+  getPublicTenantBySlug,
+  createPublicBooking
+} from '../services/public-booking-service.js';
+import {
+  required,
+  isValidPhone
+} from '../utils/validators.js';
 
 const slug = getQueryParam('slug');
 
@@ -12,6 +27,7 @@ const bookingFeedback = document.getElementById('booking-feedback');
 const bookingServiceSelect = document.getElementById('booking-service');
 
 let loadedServices = [];
+let loadedTenant = null;
 
 async function loadPublicTenant() {
   const tenant = await getPublicTenantBySlug(slug);
@@ -19,6 +35,8 @@ async function loadPublicTenant() {
   if (!tenant) {
     throw new Error('Página pública não encontrada.');
   }
+
+  loadedTenant = tenant;
 
   setText('public-business-name', tenant.businessName || '-');
   setText('public-description', tenant.description || '-');
@@ -33,19 +51,51 @@ async function loadPublicServicesData() {
   bookingServiceSelect.innerHTML = '<option value="">Selecione um serviço</option>';
 
   loadedServices.forEach((service) => {
-    const li = document.createElement('li');
-    li.innerHTML = `
+    const listItem = document.createElement('li');
+    listItem.innerHTML = `
       <strong>${service.name}</strong><br>
       Duração: ${service.durationMinutes || 0} min<br>
       Valor: ${formatCurrencyBRL(service.price || 0)}
     `;
-    servicesList.appendChild(li);
+    servicesList.appendChild(listItem);
 
     const option = document.createElement('option');
     option.value = service.id;
     option.textContent = `${service.name} - ${formatCurrencyBRL(service.price || 0)}`;
     bookingServiceSelect.appendChild(option);
   });
+}
+
+function renderBookingSuccessSummary({
+  customerName,
+  serviceName,
+  date,
+  time
+}) {
+  if (!loadedTenant) {
+    return;
+  }
+
+  const whatsappLink = buildWhatsAppLink(
+    loadedTenant.whatsapp || '',
+    `Olá, acabei de realizar um agendamento no HoraLivre. Meu nome é ${customerName}.`
+  );
+
+  bookingFeedback.innerHTML = `
+    <div class="card" style="margin-top: 12px;">
+      <strong>Agendamento criado com sucesso.</strong><br><br>
+      Empresa: ${loadedTenant.businessName || '-'}<br>
+      Cliente: ${customerName || '-'}<br>
+      Serviço: ${serviceName || '-'}<br>
+      Data: ${date || '-'}<br>
+      Horário: ${time || '-'}<br><br>
+      <a class="button primary" href="${whatsappLink}" target="_blank" rel="noopener noreferrer">
+        Falar com a empresa no WhatsApp
+      </a>
+    </div>
+  `;
+
+  bookingFeedback.className = 'feedback success';
 }
 
 bookingForm?.addEventListener('submit', async (event) => {
@@ -90,10 +140,20 @@ bookingForm?.addEventListener('submit', async (event) => {
     });
 
     bookingForm.reset();
-    showFeedback(bookingFeedback, 'Agendamento criado com sucesso.', 'success');
+
+    renderBookingSuccessSummary({
+      customerName,
+      serviceName: selectedService.name,
+      date,
+      time
+    });
   } catch (error) {
     console.error(error);
-    showFeedback(bookingFeedback, error.message || 'Não foi possível criar o agendamento.', 'error');
+    showFeedback(
+      bookingFeedback,
+      error.message || 'Não foi possível criar o agendamento.',
+      'error'
+    );
   }
 });
 
@@ -107,7 +167,11 @@ async function init() {
     await loadPublicServicesData();
   } catch (error) {
     console.error(error);
-    showFeedback(bookingFeedback, error.message || 'Não foi possível carregar a página pública.', 'error');
+    showFeedback(
+      bookingFeedback,
+      error.message || 'Não foi possível carregar a página pública.',
+      'error'
+    );
   }
 }
 
