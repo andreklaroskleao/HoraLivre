@@ -28,12 +28,31 @@ import {
 import { listTenantCustomersForSelect } from './tenant-customers.js';
 import { listServicesByTenant } from '../services/service-service.js';
 import { syncCustomerStats } from '../services/customer-stats-service.js';
+import { getTenantById } from '../services/tenant-service.js';
+import {
+  normalizeBusinessHours,
+  isWorkingDay,
+  isWithinBusinessHours
+} from '../utils/business-hours.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
 }
 
 const tenantId = getTenantId();
+
+async function validateAppointmentAgainstBusinessHours(date, time, durationMinutes) {
+  const tenant = await getTenantById(tenantId);
+  const businessHours = normalizeBusinessHours(tenant?.businessHours || {});
+
+  if (!isWorkingDay(date, businessHours)) {
+    throw new Error('A data escolhida está fora dos dias de atendimento da empresa.');
+  }
+
+  if (!isWithinBusinessHours(time, durationMinutes, businessHours)) {
+    throw new Error('O horário escolhido está fora do expediente configurado da empresa.');
+  }
+}
 
 export async function renderTenantAppointmentsList(elementId = 'appointments-list', options = {}) {
   const appointmentsListElement = document.getElementById(elementId);
@@ -366,6 +385,8 @@ export async function submitSaveAppointment(formElement, feedbackElement) {
     return false;
   }
 
+  await validateAppointmentAgainstBusinessHours(date, time, durationMinutes);
+
   const startAt = new Date(`${date}T${time}:00`).toISOString();
   const startDate = new Date(startAt);
   const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
@@ -398,7 +419,7 @@ export async function submitSaveAppointment(formElement, feedbackElement) {
 
     showFeedback(feedbackElement, 'Agendamento atualizado com sucesso.', 'success');
   } else {
-    const createdAppointment = await createAppointment({
+    await createAppointment({
       tenantId,
       customerId: customerId || null,
       customerName,
