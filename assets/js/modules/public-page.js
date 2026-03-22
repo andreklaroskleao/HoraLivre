@@ -23,6 +23,7 @@ import {
 import {
   normalizeBusinessHours,
   generateBusinessTimeSlots,
+  getEffectiveBusinessHoursForDate,
   isWithinBusinessHours
 } from '../utils/business-hours.js';
 
@@ -87,12 +88,21 @@ async function renderAvailableTimeSlots() {
   }
 
   const businessHours = normalizeBusinessHours(loadedTenant.businessHours || {});
+  const effectiveBusinessHours = getEffectiveBusinessHoursForDate(selectedDate, businessHours);
+
+  if (effectiveBusinessHours.isClosed) {
+    const info = document.createElement('div');
+    info.textContent = 'A empresa não atende nesta data.';
+    availableTimesContainer.appendChild(info);
+    return;
+  }
+
   const busyAppointments = await listBusyPublicAppointmentsByDate(slug, selectedDate);
   const slots = generateBusinessTimeSlots(selectedDate, businessHours);
 
   if (slots.length === 0) {
     const info = document.createElement('div');
-    info.textContent = 'A empresa não atende nesta data.';
+    info.textContent = 'Não há horários disponíveis nesta data.';
     availableTimesContainer.appendChild(info);
     return;
   }
@@ -108,7 +118,7 @@ async function renderAvailableTimeSlots() {
     const isInsideBusinessHours = isWithinBusinessHours(
       slot,
       selectedService.durationMinutes,
-      businessHours
+      effectiveBusinessHours
     );
 
     const isBusy = busyAppointments.some((appointment) =>
