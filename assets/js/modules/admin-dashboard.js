@@ -7,11 +7,6 @@ import {
 import { listTenants } from '../services/tenant-service.js';
 import { listPlans, getPlanById } from '../services/plan-service.js';
 import {
-  listBillingRecords,
-  getBillingSettingsByTenant,
-  calculateBillingForPeriod
-} from '../services/billing-service.js';
-import {
   formatBillingMode,
   formatCurrencyBRL,
   formatSubscriptionStatus
@@ -32,6 +27,10 @@ import {
   generateCurrentMonthBillingForAllTenants,
   renderAdminBillingList
 } from './admin-billing.js';
+import {
+  getBillingSettingsByTenant,
+  calculateBillingForPeriod
+} from '../services/billing-service.js';
 
 if (!requireAdmin()) {
   throw new Error('Acesso negado.');
@@ -149,11 +148,29 @@ async function loadTenantsTable() {
   for (const tenant of tenants) {
     const plan = tenant.planId ? await getPlanById(tenant.planId) : null;
     const billingSettings = await getBillingSettingsByTenant(tenant.id);
-    const completedAppointments = await countCompletedAppointments(tenant.id, startIso, endIso);
+    const completedAppointments = await countCompletedAppointments(
+      tenant.id,
+      startIso,
+      endIso
+    );
 
-    const effectiveBillingMode = resolveEffectiveBillingMode(tenant, billingSettings, plan);
-    const effectiveFixedPrice = resolveEffectiveFixedPrice(tenant, billingSettings, plan);
-    const effectiveUnitPrice = resolveEffectiveUnitPrice(tenant, billingSettings, plan);
+    const effectiveBillingMode = resolveEffectiveBillingMode(
+      tenant,
+      billingSettings,
+      plan
+    );
+
+    const effectiveFixedPrice = resolveEffectiveFixedPrice(
+      tenant,
+      billingSettings,
+      plan
+    );
+
+    const effectiveUnitPrice = resolveEffectiveUnitPrice(
+      tenant,
+      billingSettings,
+      plan
+    );
 
     const totalAmount = calculateBillingForPeriod({
       billingMode: effectiveBillingMode,
