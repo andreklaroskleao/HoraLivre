@@ -20,7 +20,11 @@ import {
   getStartAndEndOfCurrentMonth,
   formatDateTimeForDisplay
 } from '../utils/date-utils.js';
-import { clearElement, createListItem, setText } from '../utils/dom-utils.js';
+import {
+  clearElement,
+  createListItem,
+  setText
+} from '../utils/dom-utils.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -32,7 +36,7 @@ export async function loadTenantReportsIntoPage(options = {}) {
   const reportCompletedElementId = options.reportCompletedElementId || 'report-completed';
   const reportTotalElementId = options.reportTotalElementId || 'report-total';
   const reportStatusElementId = options.reportStatusElementId || 'report-status';
-  const appointmentsListElementId = options.appointmentsListElementId || 'appointments-list';
+  const reportAppointmentsListElementId = options.reportAppointmentsListElementId || 'report-appointments-list';
 
   const tenant = await getTenantById(tenantId);
 
@@ -56,7 +60,8 @@ export async function loadTenantReportsIntoPage(options = {}) {
   const appointments = await listAppointmentsByTenantAndPeriod(tenantId, startIso, endIso);
   const billingRecords = await listBillingRecordsByTenant(tenantId);
 
-  const currentBillingRecord = billingRecords.find((record) => record.monthRef === monthReference) || null;
+  const currentBillingRecord =
+    billingRecords.find((record) => record.monthRef === monthReference) || null;
 
   const calculatedTotal = calculateBillingForPeriod({
     billingMode: tenant.billingMode,
@@ -72,19 +77,29 @@ export async function loadTenantReportsIntoPage(options = {}) {
   );
   setText(reportStatusElementId, currentBillingRecord?.status || 'pending');
 
-  const appointmentsListElement = document.getElementById(appointmentsListElementId);
+  const reportAppointmentsListElement = document.getElementById(reportAppointmentsListElementId);
 
-  if (appointmentsListElement) {
-    clearElement(appointmentsListElement);
-
-    appointments.forEach((appointment) => {
-      appointmentsListElement.appendChild(createListItem(`
-        <strong>${appointment.customerName || '-'}</strong><br>
-        Serviço: ${appointment.serviceName || '-'}<br>
-        Início: ${formatDateTimeForDisplay(appointment.startAt)}<br>
-        Valor: ${formatCurrencyBRL(appointment.price || 0)}<br>
-        Status: ${formatAppointmentStatus(appointment.status)}
-      `));
-    });
+  if (!reportAppointmentsListElement) {
+    return;
   }
+
+  clearElement(reportAppointmentsListElement);
+
+  if (appointments.length === 0) {
+    reportAppointmentsListElement.appendChild(createListItem(`
+      <strong>Nenhum agendamento no período</strong><br>
+      Os agendamentos do mês aparecerão aqui.
+    `));
+    return;
+  }
+
+  appointments.forEach((appointment) => {
+    reportAppointmentsListElement.appendChild(createListItem(`
+      <strong>${appointment.customerName || '-'}</strong><br>
+      Serviço: ${appointment.serviceName || '-'}<br>
+      Início: ${formatDateTimeForDisplay(appointment.startAt)}<br>
+      Valor: ${formatCurrencyBRL(appointment.price || 0)}<br>
+      Status: ${formatAppointmentStatus(appointment.status)}
+    `));
+  });
 }
