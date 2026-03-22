@@ -8,10 +8,22 @@ import {
   markBillingRecordAsPaid,
   markBillingRecordAsPending
 } from '../services/billing-service.js';
-import { countCompletedAppointments } from '../services/appointment-service.js';
-import { formatCurrencyBRL, formatBillingMode } from '../utils/formatters.js';
-import { getMonthReference, getStartAndEndOfCurrentMonth } from '../utils/date-utils.js';
-import { clearElement, createListItem, showFeedback } from '../utils/dom-utils.js';
+import {
+  countCompletedAppointments
+} from '../services/appointment-service.js';
+import {
+  formatCurrencyBRL,
+  formatBillingMode
+} from '../utils/formatters.js';
+import {
+  getMonthReference,
+  getStartAndEndOfCurrentMonth
+} from '../utils/date-utils.js';
+import {
+  clearElement,
+  createListItem,
+  showFeedback
+} from '../utils/dom-utils.js';
 import { getPlanById } from '../services/plan-service.js';
 
 if (!requireAdmin()) {
@@ -57,11 +69,29 @@ export async function generateCurrentMonthBillingForAllTenants() {
 
     const plan = tenant.planId ? await getPlanById(tenant.planId) : null;
     const billingSettings = await getBillingSettingsByTenant(tenant.id);
-    const completedAppointments = await countCompletedAppointments(tenant.id, startIso, endIso);
+    const completedAppointments = await countCompletedAppointments(
+      tenant.id,
+      startIso,
+      endIso
+    );
 
-    const effectiveBillingMode = resolveEffectiveBillingMode(tenant, billingSettings, plan);
-    const effectiveFixedPrice = resolveEffectiveFixedPrice(tenant, billingSettings, plan);
-    const effectiveUnitPrice = resolveEffectiveUnitPrice(tenant, billingSettings, plan);
+    const effectiveBillingMode = resolveEffectiveBillingMode(
+      tenant,
+      billingSettings,
+      plan
+    );
+
+    const effectiveFixedPrice = resolveEffectiveFixedPrice(
+      tenant,
+      billingSettings,
+      plan
+    );
+
+    const effectiveUnitPrice = resolveEffectiveUnitPrice(
+      tenant,
+      billingSettings,
+      plan
+    );
 
     const totalAmount = calculateBillingForPeriod({
       billingMode: effectiveBillingMode,
@@ -108,8 +138,10 @@ export async function renderAdminBillingList(elementId = 'billing-list') {
       <strong>${record.monthRef}</strong><br>
       Tenant: ${record.tenantId}<br>
       Modo: ${formatBillingMode(record.billingMode)}<br>
-      Concluídos: ${record.completedAppointments || 0}<br>
-      Total: ${formatCurrencyBRL(record.totalAmount || 0)}<br>
+      Concluídos salvos: ${record.completedAppointments || 0}<br>
+      Valor salvo: ${formatCurrencyBRL(record.totalAmount || 0)}<br>
+      Valor unitário: ${formatCurrencyBRL(record.unitPrice || 0)}<br>
+      Valor fixo: ${formatCurrencyBRL(record.fixedAmount || 0)}<br>
       Status: ${record.status || '-'}<br>
       Identificador: ${record.id}<br><br>
       <div class="billing-actions">
