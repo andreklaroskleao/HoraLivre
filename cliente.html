@@ -276,13 +276,32 @@
   </div>
 
   <div class="card">
-    <p><strong>Concluídos no período:</strong> <span id="report-completed">0</span></p>
-    <p><strong>Valor devido:</strong> <span id="report-total">R$ 0,00</span></p>
-    <p><strong>Status da cobrança:</strong> <span id="report-status">-</span></p>
+    <div class="filter-bar">
+      <label>
+        <span>Início</span>
+        <input id="report-filter-start" type="date">
+      </label>
+
+      <label>
+        <span>Fim</span>
+        <input id="report-filter-end" type="date">
+      </label>
+
+      <button class="button" id="report-filter-button" type="button">Filtrar relatório</button>
+      <button class="button" id="report-filter-reset-button" type="button">Limpar</button>
+    </div>
+
+    <div class="top-gap">
+      <p><strong>Concluídos no período:</strong> <span id="report-completed">0</span></p>
+      <p><strong>Valor devido:</strong> <span id="report-total">R$ 0,00</span></p>
+      <p><strong>Status da cobrança:</strong> <span id="report-status">-</span></p>
+    </div>
 
     <div class="top-gap">
       <h4>Agendamentos do período</h4>
-      <ul class="simple-list" id="report-appointments-list"></ul>
+      <div class="scroll-panel">
+        <ul class="simple-list" id="report-appointments-list"></ul>
+      </div>
     </div>
 
     <div class="top-gap">
