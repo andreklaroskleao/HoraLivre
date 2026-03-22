@@ -75,27 +75,20 @@ export async function loadTenantReportsIntoPage(options = {}) {
     pricePerExecutedService: billingSettings?.pricePerExecutedService || 0
   });
 
-  let reportStatus = 'calculado';
+  let reportStatus = 'calculado em tempo real';
 
   if (isFullCurrentMonthFilter(startIso, endIso)) {
     const monthReference = getMonthReference(new Date(startIso));
     const currentBillingRecord = await getBillingRecordByTenantAndMonth(tenantId, monthReference);
 
     if (currentBillingRecord) {
-      setText(reportCompletedElementId, String(currentBillingRecord.completedAppointments || completedAppointments));
-      setText(reportTotalElementId, formatCurrencyBRL(currentBillingRecord.totalAmount || calculatedTotal));
-      setText(reportStatusElementId, currentBillingRecord.status || 'pending');
-      reportStatus = currentBillingRecord.status || 'pending';
-    } else {
-      setText(reportCompletedElementId, String(completedAppointments));
-      setText(reportTotalElementId, formatCurrencyBRL(calculatedTotal));
-      setText(reportStatusElementId, reportStatus);
+      reportStatus = `${currentBillingRecord.status || 'pending'} (registro salvo)`;
     }
-  } else {
-    setText(reportCompletedElementId, String(completedAppointments));
-    setText(reportTotalElementId, formatCurrencyBRL(calculatedTotal));
-    setText(reportStatusElementId, reportStatus);
   }
+
+  setText(reportCompletedElementId, String(completedAppointments));
+  setText(reportTotalElementId, formatCurrencyBRL(calculatedTotal));
+  setText(reportStatusElementId, reportStatus);
 
   const reportAppointmentsListElement = document.getElementById(reportAppointmentsListElementId);
 
