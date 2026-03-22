@@ -116,6 +116,27 @@ function setSelectedWorkingDays(values = []) {
   });
 }
 
+function textareaLinesToArray(value) {
+  return String(value || '')
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function arrayToTextareaLines(values = []) {
+  return values.join('\n');
+}
+
+function parseSpecialDatesTextarea(value) {
+  const lines = textareaLinesToArray(value);
+
+  return lines.map((line) => JSON.parse(line));
+}
+
+function specialDatesToTextarea(value = []) {
+  return value.map((item) => JSON.stringify(item)).join('\n');
+}
+
 logoutButton?.addEventListener('click', async () => {
   await logoutUser();
   window.location.href = './login.html';
@@ -169,6 +190,9 @@ async function loadTenantData() {
   document.getElementById('company-form-lunch-start-time').value = businessHours.lunchStartTime;
   document.getElementById('company-form-lunch-end-time').value = businessHours.lunchEndTime;
   document.getElementById('company-form-slot-interval-minutes').value = businessHours.slotIntervalMinutes;
+  document.getElementById('company-form-holidays').value = arrayToTextareaLines(businessHours.holidays);
+  document.getElementById('company-form-blocked-dates').value = arrayToTextareaLines(businessHours.blockedDates);
+  document.getElementById('company-form-special-dates').value = specialDatesToTextarea(businessHours.specialDates);
 
   if (publicPageLinkButton && tenant.slug) {
     publicPageLinkButton.href = `./agendar.html?slug=${tenant.slug}`;
@@ -245,6 +269,10 @@ companyForm?.addEventListener('submit', async (event) => {
     const lunchEndTime = document.getElementById('company-form-lunch-end-time').value;
     const slotIntervalMinutes = Number(document.getElementById('company-form-slot-interval-minutes').value || 30);
 
+    const holidays = textareaLinesToArray(document.getElementById('company-form-holidays').value);
+    const blockedDates = textareaLinesToArray(document.getElementById('company-form-blocked-dates').value);
+    const specialDates = parseSpecialDatesTextarea(document.getElementById('company-form-special-dates').value);
+
     if (!required(businessName)) {
       showFeedback(companyFeedback, 'Nome da empresa é obrigatório.', 'error');
       return;
@@ -284,15 +312,22 @@ companyForm?.addEventListener('submit', async (event) => {
         closingTime,
         lunchStartTime,
         lunchEndTime,
-        slotIntervalMinutes
+        slotIntervalMinutes,
+        holidays,
+        blockedDates,
+        specialDates
       }
     });
 
     await loadTenantData();
-    showFeedback(companyFeedback, 'Dados da empresa e expediente atualizados com sucesso.', 'success');
+    showFeedback(companyFeedback, 'Dados da empresa e disponibilidade atualizados com sucesso.', 'success');
   } catch (error) {
     console.error(error);
-    showFeedback(companyFeedback, error.message || 'Não foi possível atualizar a empresa.', 'error');
+    showFeedback(
+      companyFeedback,
+      error.message || 'Não foi possível atualizar a empresa. Verifique se as datas especiais estão em JSON válido.',
+      'error'
+    );
   }
 });
 
