@@ -88,3 +88,19 @@ export function isSameDay(isoString, dateString) {
 
   return new Date(isoString).toISOString().slice(0, 10) === dateString;
 }
+
+export function buildStartOfDayIsoFromDateInput(dateString) {
+  if (!dateString) {
+    return null;
+  }
+
+  return new Date(`${dateString}T00:00:00`).toISOString();
+}
+
+export function buildEndOfDayIsoFromDateInput(dateString) {
+  if (!dateString) {
+    return null;
+  }
+
+  return new Date(`${dateString}T23:59:59`).toISOString();
+}
