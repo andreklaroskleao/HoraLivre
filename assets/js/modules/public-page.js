@@ -13,7 +13,8 @@ import {
   listPublicServices,
   getPublicTenantBySlug,
   createPublicBooking,
-  listBusyPublicAppointmentsByDate
+  listBusyPublicAppointmentsByDate,
+  appointmentOverlaps
 } from '../services/public-booking-service.js';
 import {
   required,
@@ -53,6 +54,10 @@ function generateBaseTimeSlots() {
   return slots;
 }
 
+function getSelectedService() {
+  return loadedServices.find((service) => service.id === bookingServiceSelect.value) || null;
+}
+
 function renderBookingSuccessSummary({
   customerName,
   serviceName,
@@ -87,19 +92,16 @@ function renderBookingSuccessSummary({
 
 async function renderAvailableTimeSlots() {
   const selectedDate = bookingDateInput.value;
+  const selectedService = getSelectedService();
 
   clearElement(availableTimesContainer);
   bookingTimeInput.value = '';
 
-  if (!selectedDate) {
+  if (!selectedDate || !selectedService) {
     return;
   }
 
   const busyAppointments = await listBusyPublicAppointmentsByDate(slug, selectedDate);
-  const busyTimes = busyAppointments.map((appointment) =>
-    new Date(appointment.startAt).toISOString().slice(11, 16)
-  );
-
   const slots = generateBaseTimeSlots();
 
   slots.forEach((slot) => {
@@ -108,7 +110,16 @@ async function renderAvailableTimeSlots() {
     button.textContent = slot;
     button.className = 'time-button';
 
-    const isBusy = busyTimes.includes(slot);
+    const slotStartIso = new Date(`${selectedDate}T${slot}:00`).toISOString();
+
+    const isBusy = busyAppointments.some((appointment) =>
+      appointmentOverlaps({
+        slotStartIso,
+        slotDurationMinutes: selectedService.durationMinutes,
+        appointmentStartIso: appointment.startAt,
+        appointmentEndIso: appointment.endAt
+      })
+    );
 
     if (isBusy) {
       button.classList.add('disabled');
@@ -165,6 +176,19 @@ async function loadPublicServicesData() {
 }
 
 bookingDateInput?.addEventListener('change', async () => {
+  try {
+    await renderAvailableTimeSlots();
+  } catch (error) {
+    console.error(error);
+    showFeedback(
+      bookingFeedback,
+      error.message || 'Não foi possível carregar os horários disponíveis.',
+      'error'
+    );
+  }
+});
+
+bookingServiceSelect?.addEventListener('change', async () => {
   try {
     await renderAvailableTimeSlots();
   } catch (error) {
