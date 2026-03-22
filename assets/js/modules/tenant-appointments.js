@@ -31,7 +31,7 @@ import { syncCustomerStats } from '../services/customer-stats-service.js';
 import { getTenantById } from '../services/tenant-service.js';
 import {
   normalizeBusinessHours,
-  isWorkingDay,
+  getEffectiveBusinessHoursForDate,
   isWithinBusinessHours
 } from '../utils/business-hours.js';
 
@@ -44,12 +44,13 @@ const tenantId = getTenantId();
 async function validateAppointmentAgainstBusinessHours(date, time, durationMinutes) {
   const tenant = await getTenantById(tenantId);
   const businessHours = normalizeBusinessHours(tenant?.businessHours || {});
+  const effectiveBusinessHours = getEffectiveBusinessHoursForDate(date, businessHours);
 
-  if (!isWorkingDay(date, businessHours)) {
-    throw new Error('A data escolhida está fora dos dias de atendimento da empresa.');
+  if (effectiveBusinessHours.isClosed) {
+    throw new Error('A data escolhida está indisponível para atendimento.');
   }
 
-  if (!isWithinBusinessHours(time, durationMinutes, businessHours)) {
+  if (!isWithinBusinessHours(time, durationMinutes, effectiveBusinessHours)) {
     throw new Error('O horário escolhido está fora do expediente configurado da empresa.');
   }
 }
