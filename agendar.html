@@ -22,7 +22,9 @@
     <section class="grid two-col">
       <article class="card">
         <h2>Serviços disponíveis</h2>
-        <ul class="simple-list" id="public-services-list"></ul>
+        <div class="public-scroll-panel">
+          <ul class="simple-list" id="public-services-list"></ul>
+        </div>
       </article>
 
       <article class="card">
@@ -49,15 +51,17 @@
             <input id="booking-date" type="date" required>
           </label>
 
-          <label>
-            <span>Horário</span>
-            <input id="booking-time" type="time" required>
-          </label>
+          <div>
+            <strong>Horários disponíveis</strong>
+            <div id="available-times" class="times-grid top-gap"></div>
+          </div>
+
+          <input id="booking-time" type="hidden" required>
 
           <button class="button primary" type="submit">Confirmar agendamento</button>
         </form>
 
-        <p id="booking-feedback" class="feedback"></p>
+        <div id="booking-feedback" class="feedback"></div>
       </article>
     </section>
   </main>
