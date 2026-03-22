@@ -4,7 +4,7 @@ import { getTenantById } from '../services/tenant-service.js';
 import { getPlanById } from '../services/plan-service.js';
 import {
   getBillingSettingsByTenant,
-  listBillingRecordsByTenant,
+  getBillingRecordByTenantAndMonth,
   calculateBillingForPeriod
 } from '../services/billing-service.js';
 import {
@@ -34,6 +34,11 @@ if (!requireTenantUser()) {
 
 const tenantId = getTenantId();
 
+function isFullCurrentMonthFilter(startIso, endIso) {
+  const currentMonthPeriod = getStartAndEndOfCurrentMonth();
+  return startIso === currentMonthPeriod.startIso && endIso === currentMonthPeriod.endIso;
+}
+
 export async function loadTenantReportsIntoPage(options = {}) {
   const reportCompletedElementId = options.reportCompletedElementId || 'report-completed';
   const reportTotalElementId = options.reportTotalElementId || 'report-total';
@@ -62,11 +67,6 @@ export async function loadTenantReportsIntoPage(options = {}) {
   const billingSettings = await getBillingSettingsByTenant(tenantId);
   const completedAppointments = await countCompletedAppointments(tenantId, startIso, endIso);
   const appointments = await listAppointmentsByTenantAndPeriod(tenantId, startIso, endIso);
-  const billingRecords = await listBillingRecordsByTenant(tenantId);
-
-  const monthReference = getMonthReference(new Date(startIso));
-  const currentBillingRecord =
-    billingRecords.find((record) => record.monthRef === monthReference) || null;
 
   const calculatedTotal = calculateBillingForPeriod({
     billingMode: tenant.billingMode,
@@ -75,12 +75,27 @@ export async function loadTenantReportsIntoPage(options = {}) {
     pricePerExecutedService: billingSettings?.pricePerExecutedService || 0
   });
 
-  setText(reportCompletedElementId, String(completedAppointments));
-  setText(
-    reportTotalElementId,
-    formatCurrencyBRL(currentBillingRecord?.totalAmount ?? calculatedTotal)
-  );
-  setText(reportStatusElementId, currentBillingRecord?.status || 'pending');
+  let reportStatus = 'calculado';
+
+  if (isFullCurrentMonthFilter(startIso, endIso)) {
+    const monthReference = getMonthReference(new Date(startIso));
+    const currentBillingRecord = await getBillingRecordByTenantAndMonth(tenantId, monthReference);
+
+    if (currentBillingRecord) {
+      setText(reportCompletedElementId, String(currentBillingRecord.completedAppointments || completedAppointments));
+      setText(reportTotalElementId, formatCurrencyBRL(currentBillingRecord.totalAmount || calculatedTotal));
+      setText(reportStatusElementId, currentBillingRecord.status || 'pending');
+      reportStatus = currentBillingRecord.status || 'pending';
+    } else {
+      setText(reportCompletedElementId, String(completedAppointments));
+      setText(reportTotalElementId, formatCurrencyBRL(calculatedTotal));
+      setText(reportStatusElementId, reportStatus);
+    }
+  } else {
+    setText(reportCompletedElementId, String(completedAppointments));
+    setText(reportTotalElementId, formatCurrencyBRL(calculatedTotal));
+    setText(reportStatusElementId, reportStatus);
+  }
 
   const reportAppointmentsListElement = document.getElementById(reportAppointmentsListElementId);
 
