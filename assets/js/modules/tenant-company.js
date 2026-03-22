@@ -22,9 +22,13 @@ import {
 } from './tenant-customers.js';
 import {
   renderTenantAppointmentsList,
-  submitCreateAppointment
+  submitCreateAppointment,
+  bindAppointmentFilters
 } from './tenant-appointments.js';
-import { loadTenantReportsIntoPage } from './tenant-reports.js';
+import {
+  loadTenantReportsIntoPage,
+  bindReportFilters
+} from './tenant-reports.js';
 import { listCustomersByTenant } from '../services/customer-service.js';
 import { listAppointmentsByTenant } from '../services/appointment-service.js';
 
@@ -157,6 +161,9 @@ async function init() {
     await loadTenantReportsIntoPage({
       reportAppointmentsListElementId: 'report-appointments-list'
     });
+
+    bindAppointmentFilters();
+    bindReportFilters();
   } catch (error) {
     console.error(error);
   }
