@@ -51,6 +51,12 @@ import {
   isValidUrl
 } from '../utils/validators.js';
 import { normalizeBusinessHours } from '../utils/business-hours.js';
+import {
+  bindAvailabilityUi,
+  setAvailabilityUiState,
+  getAvailabilityUiState,
+  renderAvailabilitySummary
+} from './tenant-availability-ui.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -103,40 +109,6 @@ function resolveEffectiveUnitPrice(tenant, billingSettings, plan) {
   );
 }
 
-function getSelectedWorkingDays() {
-  const select = document.getElementById('company-form-working-days');
-  return Array.from(select.selectedOptions).map((option) => option.value);
-}
-
-function setSelectedWorkingDays(values = []) {
-  const select = document.getElementById('company-form-working-days');
-
-  Array.from(select.options).forEach((option) => {
-    option.selected = values.includes(option.value);
-  });
-}
-
-function textareaLinesToArray(value) {
-  return String(value || '')
-    .split('\n')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function arrayToTextareaLines(values = []) {
-  return values.join('\n');
-}
-
-function parseSpecialDatesTextarea(value) {
-  const lines = textareaLinesToArray(value);
-
-  return lines.map((line) => JSON.parse(line));
-}
-
-function specialDatesToTextarea(value = []) {
-  return value.map((item) => JSON.stringify(item)).join('\n');
-}
-
 logoutButton?.addEventListener('click', async () => {
   await logoutUser();
   window.location.href = './login.html';
@@ -183,16 +155,14 @@ async function loadTenantData() {
   document.getElementById('company-form-logo-url').value = tenant.logoUrl || '';
   document.getElementById('company-form-instagram').value = tenant.instagram || '';
   document.getElementById('company-form-address').value = tenant.address || '';
-
-  setSelectedWorkingDays(businessHours.workingDays);
   document.getElementById('company-form-opening-time').value = businessHours.openingTime;
   document.getElementById('company-form-closing-time').value = businessHours.closingTime;
   document.getElementById('company-form-lunch-start-time').value = businessHours.lunchStartTime;
   document.getElementById('company-form-lunch-end-time').value = businessHours.lunchEndTime;
-  document.getElementById('company-form-slot-interval-minutes').value = businessHours.slotIntervalMinutes;
-  document.getElementById('company-form-holidays').value = arrayToTextareaLines(businessHours.holidays);
-  document.getElementById('company-form-blocked-dates').value = arrayToTextareaLines(businessHours.blockedDates);
-  document.getElementById('company-form-special-dates').value = specialDatesToTextarea(businessHours.specialDates);
+  document.getElementById('company-form-slot-interval-minutes').value = String(businessHours.slotIntervalMinutes);
+
+  setAvailabilityUiState(businessHours);
+  renderAvailabilitySummary();
 
   if (publicPageLinkButton && tenant.slug) {
     publicPageLinkButton.href = `./agendar.html?slug=${tenant.slug}`;
@@ -262,16 +232,13 @@ companyForm?.addEventListener('submit', async (event) => {
     const instagram = document.getElementById('company-form-instagram').value.trim();
     const address = document.getElementById('company-form-address').value.trim();
 
-    const workingDays = getSelectedWorkingDays();
     const openingTime = document.getElementById('company-form-opening-time').value;
     const closingTime = document.getElementById('company-form-closing-time').value;
     const lunchStartTime = document.getElementById('company-form-lunch-start-time').value;
     const lunchEndTime = document.getElementById('company-form-lunch-end-time').value;
     const slotIntervalMinutes = Number(document.getElementById('company-form-slot-interval-minutes').value || 30);
 
-    const holidays = textareaLinesToArray(document.getElementById('company-form-holidays').value);
-    const blockedDates = textareaLinesToArray(document.getElementById('company-form-blocked-dates').value);
-    const specialDates = parseSpecialDatesTextarea(document.getElementById('company-form-special-dates').value);
+    const availabilityState = getAvailabilityUiState();
 
     if (!required(businessName)) {
       showFeedback(companyFeedback, 'Nome da empresa é obrigatório.', 'error');
@@ -293,8 +260,8 @@ companyForm?.addEventListener('submit', async (event) => {
       return;
     }
 
-    if (workingDays.length === 0) {
-      showFeedback(companyFeedback, 'Selecione ao menos um dia de atendimento.', 'error');
+    if (!availabilityState.workingDays.length) {
+      showFeedback(companyFeedback, 'Selecione pelo menos um dia de atendimento.', 'error');
       return;
     }
 
@@ -307,15 +274,15 @@ companyForm?.addEventListener('submit', async (event) => {
       instagram,
       address,
       businessHours: {
-        workingDays,
+        workingDays: availabilityState.workingDays,
         openingTime,
         closingTime,
         lunchStartTime,
         lunchEndTime,
         slotIntervalMinutes,
-        holidays,
-        blockedDates,
-        specialDates
+        holidays: availabilityState.holidays,
+        blockedDates: availabilityState.blockedDates,
+        specialDates: availabilityState.specialDates
       }
     });
 
@@ -325,7 +292,7 @@ companyForm?.addEventListener('submit', async (event) => {
     console.error(error);
     showFeedback(
       companyFeedback,
-      error.message || 'Não foi possível atualizar a empresa. Verifique se as datas especiais estão em JSON válido.',
+      error.message || 'Não foi possível atualizar a empresa.',
       'error'
     );
   }
@@ -370,6 +337,8 @@ appointmentForm?.addEventListener('submit', async (event) => {
 
 async function init() {
   try {
+    bindAvailabilityUi();
+
     await loadTenantData();
     await loadDashboardSummary();
     await loadSupportButton();
