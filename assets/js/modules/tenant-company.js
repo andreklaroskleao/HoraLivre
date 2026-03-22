@@ -3,7 +3,11 @@ import { getTenantId } from '../state/session-store.js';
 import { logoutUser } from '../services/auth-service.js';
 import { getTenantById } from '../services/tenant-service.js';
 import { getPlatformSettings } from '../services/admin-service.js';
-import { listBillingRecordsByTenant } from '../services/billing-service.js';
+import {
+  getBillingSettingsByTenant,
+  calculateBillingForPeriod
+} from '../services/billing-service.js';
+import { getPlanById } from '../services/plan-service.js';
 import {
   formatBillingMode,
   formatCurrencyBRL,
@@ -30,7 +34,11 @@ import {
   bindReportFilters
 } from './tenant-reports.js';
 import { listCustomersByTenant } from '../services/customer-service.js';
-import { listAppointmentsByTenant } from '../services/appointment-service.js';
+import {
+  listAppointmentsByTenant,
+  countCompletedAppointments
+} from '../services/appointment-service.js';
+import { getStartAndEndOfCurrentMonth } from '../utils/date-utils.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -49,6 +57,33 @@ const appointmentForm = document.getElementById('appointment-form');
 const serviceFeedback = document.getElementById('service-feedback');
 const customerFeedback = document.getElementById('customer-feedback');
 const appointmentFeedback = document.getElementById('appointment-feedback');
+
+function resolveEffectiveBillingMode(tenant, billingSettings, plan) {
+  return (
+    billingSettings?.billingMode ||
+    tenant?.billingMode ||
+    plan?.billingMode ||
+    'free'
+  );
+}
+
+function resolveEffectiveFixedPrice(tenant, billingSettings, plan) {
+  return Number(
+    billingSettings?.fixedMonthlyPrice ??
+    plan?.price ??
+    tenant?.fixedMonthlyPrice ??
+    0
+  );
+}
+
+function resolveEffectiveUnitPrice(tenant, billingSettings, plan) {
+  return Number(
+    billingSettings?.pricePerExecutedService ??
+    plan?.pricePerExecutedService ??
+    tenant?.pricePerExecutedService ??
+    0
+  );
+}
 
 logoutButton?.addEventListener('click', async () => {
   await logoutUser();
@@ -75,30 +110,44 @@ async function loadTenantData() {
   if (publicPageLinkButton && tenant.slug) {
     publicPageLinkButton.href = `./agendar.html?slug=${tenant.slug}`;
   }
+
+  return tenant;
 }
 
 async function loadDashboardSummary() {
-  const [billingRecords, customers, appointments] = await Promise.all([
-    listBillingRecordsByTenant(tenantId),
+  const tenant = await getTenantById(tenantId);
+  const plan = tenant?.planId ? await getPlanById(tenant.planId) : null;
+  const billingSettings = await getBillingSettingsByTenant(tenantId);
+
+  const [customers, appointments] = await Promise.all([
     listCustomersByTenant(tenantId),
     listAppointmentsByTenant(tenantId)
   ]);
 
-  const latestBillingRecord = billingRecords[0] || null;
+  const { startIso, endIso } = getStartAndEndOfCurrentMonth();
+  const completedAppointmentsCount = await countCompletedAppointments(tenantId, startIso, endIso);
+
+  const effectiveBillingMode = resolveEffectiveBillingMode(tenant, billingSettings, plan);
+  const effectiveFixedPrice = resolveEffectiveFixedPrice(tenant, billingSettings, plan);
+  const effectiveUnitPrice = resolveEffectiveUnitPrice(tenant, billingSettings, plan);
+
+  const totalBillingAmount = calculateBillingForPeriod({
+    billingMode: effectiveBillingMode,
+    completedAppointments: completedAppointmentsCount,
+    fixedMonthlyPrice: effectiveFixedPrice,
+    pricePerExecutedService: effectiveUnitPrice
+  });
+
   const todayDate = new Date().toISOString().slice(0, 10);
 
   const todayAppointments = appointments.filter((appointment) =>
     String(appointment.startAt || '').slice(0, 10) === todayDate
   );
 
-  const completedAppointments = appointments.filter(
-    (appointment) => appointment.status === 'completed'
-  );
-
-  setText('tenant-stat-billing', formatCurrencyBRL(latestBillingRecord?.totalAmount || 0));
+  setText('tenant-stat-billing', formatCurrencyBRL(totalBillingAmount));
   setText('tenant-stat-customers', String(customers.length));
   setText('tenant-stat-today', String(todayAppointments.length));
-  setText('tenant-stat-completed', String(completedAppointments.length));
+  setText('tenant-stat-completed', String(completedAppointmentsCount));
 }
 
 async function loadSupportButton() {
