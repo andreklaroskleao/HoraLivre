@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -26,6 +27,20 @@ export async function listCustomersByTenant(tenantId) {
     id: documentItem.id,
     ...documentItem.data()
   }));
+}
+
+export async function getCustomerById(customerId) {
+  const reference = doc(db, 'customers', customerId);
+  const snapshot = await getDoc(reference);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return {
+    id: snapshot.id,
+    ...snapshot.data()
+  };
 }
 
 export async function createCustomer(data) {
@@ -79,4 +94,15 @@ export async function findCustomerByPhone(tenantId, phone) {
     id: documentItem.id,
     ...documentItem.data()
   };
+}
+
+export async function updateCustomerStats(customerId, stats) {
+  const reference = doc(db, 'customers', customerId);
+
+  await updateDoc(reference, {
+    totalAppointments: Number(stats.totalAppointments || 0),
+    totalSpent: Number(stats.totalSpent || 0),
+    lastAppointmentAt: stats.lastAppointmentAt || null,
+    updatedAt: new Date().toISOString()
+  });
 }
