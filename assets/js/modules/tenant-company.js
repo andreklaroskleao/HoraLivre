@@ -57,6 +57,7 @@ import {
   getAvailabilityUiState,
   renderAvailabilitySummary
 } from './tenant-availability-ui.js';
+import { bindClientTabs } from './client-tabs.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -337,6 +338,7 @@ appointmentForm?.addEventListener('submit', async (event) => {
 
 async function init() {
   try {
+    bindClientTabs();
     bindAvailabilityUi();
 
     await loadTenantData();
