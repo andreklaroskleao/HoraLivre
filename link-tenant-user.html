@@ -59,12 +59,15 @@
   <script type="module">
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
     import { auth } from './assets/js/config/firebase-init.js';
-    import { createTenantUser, findTenantUserByUid } from './assets/js/services/tenant-user-service.js';
+    import {
+      createOrUpdateTenantUser,
+      getTenantUserByUid
+    } from './assets/js/services/tenant-user-service.js';
     import { required, isValidEmail } from './assets/js/utils/validators.js';
     import { showFeedback, setText } from './assets/js/utils/dom-utils.js';
 
-    const currentUidElement = document.getElementById('current-uid');
-    const currentEmailElement = document.getElementById('current-email');
+    const currentUidElementId = 'current-uid';
+    const currentEmailElementId = 'current-email';
     const form = document.getElementById('tenant-user-form');
     const feedbackElement = document.getElementById('tenant-user-feedback');
 
@@ -78,10 +81,10 @@
 
       authenticatedUser = user;
 
-      setText('current-uid', user.uid);
-      setText('current-email', user.email || '-');
+      setText(currentUidElementId, user.uid);
+      setText(currentEmailElementId, user.email || '-');
 
-      const existingTenantUser = await findTenantUserByUid(user.uid);
+      const existingTenantUser = await getTenantUserByUid(user.uid);
 
       if (existingTenantUser) {
         showFeedback(
@@ -89,6 +92,13 @@
           `Este usuário já está vinculado ao tenant ${existingTenantUser.tenantId}.`,
           'success'
         );
+
+        document.getElementById('tenant-id').value = existingTenantUser.tenantId || '';
+        document.getElementById('tenant-user-name').value = existingTenantUser.name || '';
+        document.getElementById('tenant-user-email').value = existingTenantUser.email || '';
+        document.getElementById('tenant-user-role').value = existingTenantUser.role || 'owner';
+      } else {
+        document.getElementById('tenant-user-email').value = user.email || '';
       }
     });
 
@@ -121,14 +131,7 @@
           return;
         }
 
-        const existingTenantUser = await findTenantUserByUid(authenticatedUser.uid);
-
-        if (existingTenantUser) {
-          showFeedback(feedbackElement, 'Este usuário já está vinculado a um tenant.', 'error');
-          return;
-        }
-
-        await createTenantUser({
+        await createOrUpdateTenantUser({
           tenantId,
           uid: authenticatedUser.uid,
           name,
