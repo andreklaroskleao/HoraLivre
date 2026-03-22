@@ -43,6 +43,14 @@ export async function listAppointmentsByTenantAndPeriod(tenantId, startIso, endI
   }));
 }
 
+export async function listBusyAppointmentsByTenantAndDay(tenantId, startIso, endIso) {
+  const appointments = await listAppointmentsByTenantAndPeriod(tenantId, startIso, endIso);
+
+  return appointments.filter((appointment) =>
+    ['scheduled', 'confirmed', 'completed'].includes(appointment.status)
+  );
+}
+
 export async function createAppointment(data) {
   const payload = {
     tenantId: data.tenantId,
