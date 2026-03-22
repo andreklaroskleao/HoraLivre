@@ -39,6 +39,33 @@ function isFullCurrentMonthFilter(startIso, endIso) {
   return startIso === currentMonthPeriod.startIso && endIso === currentMonthPeriod.endIso;
 }
 
+function resolveEffectiveBillingMode(tenant, billingSettings, plan) {
+  return (
+    billingSettings?.billingMode ||
+    tenant?.billingMode ||
+    plan?.billingMode ||
+    'free'
+  );
+}
+
+function resolveEffectiveFixedPrice(tenant, billingSettings, plan) {
+  return Number(
+    billingSettings?.fixedMonthlyPrice ??
+    plan?.price ??
+    tenant?.fixedMonthlyPrice ??
+    0
+  );
+}
+
+function resolveEffectiveUnitPrice(tenant, billingSettings, plan) {
+  return Number(
+    billingSettings?.pricePerExecutedService ??
+    plan?.pricePerExecutedService ??
+    tenant?.pricePerExecutedService ??
+    0
+  );
+}
+
 export async function loadTenantReportsIntoPage(options = {}) {
   const reportCompletedElementId = options.reportCompletedElementId || 'report-completed';
   const reportTotalElementId = options.reportTotalElementId || 'report-total';
@@ -68,11 +95,25 @@ export async function loadTenantReportsIntoPage(options = {}) {
   const completedAppointments = await countCompletedAppointments(tenantId, startIso, endIso);
   const appointments = await listAppointmentsByTenantAndPeriod(tenantId, startIso, endIso);
 
+  const effectiveBillingMode = resolveEffectiveBillingMode(tenant, billingSettings, plan);
+  const effectiveFixedPrice = resolveEffectiveFixedPrice(tenant, billingSettings, plan);
+  const effectiveUnitPrice = resolveEffectiveUnitPrice(tenant, billingSettings, plan);
+
+  console.log('HoraLivre relatório tenant');
+  console.log('tenantId:', tenantId);
+  console.log('tenant.billingMode:', tenant?.billingMode);
+  console.log('billingSettings:', billingSettings);
+  console.log('plan:', plan);
+  console.log('effectiveBillingMode:', effectiveBillingMode);
+  console.log('effectiveFixedPrice:', effectiveFixedPrice);
+  console.log('effectiveUnitPrice:', effectiveUnitPrice);
+  console.log('completedAppointments:', completedAppointments);
+
   const calculatedTotal = calculateBillingForPeriod({
-    billingMode: tenant.billingMode,
+    billingMode: effectiveBillingMode,
     completedAppointments,
-    fixedMonthlyPrice: billingSettings?.fixedMonthlyPrice || 0,
-    pricePerExecutedService: billingSettings?.pricePerExecutedService || 0
+    fixedMonthlyPrice: effectiveFixedPrice,
+    pricePerExecutedService: effectiveUnitPrice
   });
 
   let reportStatus = 'calculado em tempo real';
