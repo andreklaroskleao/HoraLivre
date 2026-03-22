@@ -2,6 +2,7 @@ import { requireTenantUser } from '../utils/guards.js';
 import { getTenantId } from '../state/session-store.js';
 import {
   listAppointmentsByTenant,
+  listAppointmentsByTenantAndPeriod,
   createAppointment,
   updateAppointment,
   updateAppointmentStatus
@@ -18,7 +19,11 @@ import {
   clearElement,
   showFeedback
 } from '../utils/dom-utils.js';
-import { formatDateTimeForDisplay } from '../utils/date-utils.js';
+import {
+  formatDateTimeForDisplay,
+  buildStartOfDayIsoFromDateInput,
+  buildEndOfDayIsoFromDateInput
+} from '../utils/date-utils.js';
 
 if (!requireTenantUser()) {
   throw new Error('Acesso negado.');
@@ -26,22 +31,28 @@ if (!requireTenantUser()) {
 
 const tenantId = getTenantId();
 
-export async function renderTenantAppointmentsList(elementId = 'appointments-list') {
+export async function renderTenantAppointmentsList(elementId = 'appointments-list', options = {}) {
   const appointmentsListElement = document.getElementById(elementId);
 
   if (!appointmentsListElement) {
     return;
   }
 
-  const appointments = await listAppointmentsByTenant(tenantId);
+  let appointments = [];
+
+  if (options.startIso && options.endIso) {
+    appointments = await listAppointmentsByTenantAndPeriod(tenantId, options.startIso, options.endIso);
+  } else {
+    appointments = await listAppointmentsByTenant(tenantId);
+  }
 
   clearElement(appointmentsListElement);
 
   if (appointments.length === 0) {
     const emptyItem = document.createElement('li');
     emptyItem.innerHTML = `
-      <strong>Nenhum agendamento cadastrado</strong><br>
-      Os agendamentos do seu negócio aparecerão aqui.
+      <strong>Nenhum agendamento encontrado</strong><br>
+      Não há agendamentos para o filtro atual.
     `;
     appointmentsListElement.appendChild(emptyItem);
     return;
@@ -87,10 +98,10 @@ export async function renderTenantAppointmentsList(elementId = 'appointments-lis
     appointmentsListElement.appendChild(listItem);
   });
 
-  bindAppointmentStatusButtons(elementId);
+  bindAppointmentStatusButtons(elementId, options);
 }
 
-function bindAppointmentStatusButtons(elementId = 'appointments-list') {
+function bindAppointmentStatusButtons(elementId = 'appointments-list', options = {}) {
   const container = document.getElementById(elementId);
 
   if (!container) {
@@ -106,7 +117,7 @@ function bindAppointmentStatusButtons(elementId = 'appointments-list') {
 
       try {
         await setAppointmentStatus(appointmentId, status);
-        await renderTenantAppointmentsList(elementId);
+        await renderTenantAppointmentsList(elementId, options);
 
         const appointmentFeedbackElement = document.getElementById('appointment-feedback');
 
@@ -131,6 +142,35 @@ function bindAppointmentStatusButtons(elementId = 'appointments-list') {
         }
       }
     });
+  });
+}
+
+export function bindAppointmentFilters() {
+  const filterButton = document.getElementById('appointments-filter-button');
+  const resetButton = document.getElementById('appointments-filter-reset-button');
+  const startInput = document.getElementById('appointments-filter-start');
+  const endInput = document.getElementById('appointments-filter-end');
+
+  filterButton?.addEventListener('click', async () => {
+    const startIso = buildStartOfDayIsoFromDateInput(startInput?.value || '');
+    const endIso = buildEndOfDayIsoFromDateInput(endInput?.value || '');
+
+    await renderTenantAppointmentsList('appointments-list', {
+      startIso,
+      endIso
+    });
+  });
+
+  resetButton?.addEventListener('click', async () => {
+    if (startInput) {
+      startInput.value = '';
+    }
+
+    if (endInput) {
+      endInput.value = '';
+    }
+
+    await renderTenantAppointmentsList();
   });
 }
 
