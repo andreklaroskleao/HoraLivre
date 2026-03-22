@@ -185,70 +185,87 @@
       </section>
 
       <section id="agenda" class="section">
-        <div class="section-heading">
-          <h3>Agenda</h3>
-          <p class="muted">
-            Cadastre agendamentos do painel da empresa. A cobrança por uso considera apenas
-            agendamentos com status concluído.
-          </p>
-        </div>
+  <div class="section-heading">
+    <h3>Agenda</h3>
+    <p class="muted">
+      Cadastre agendamentos do painel da empresa. A cobrança por uso considera apenas
+      agendamentos com status concluído.
+    </p>
+  </div>
 
-        <div class="card">
-          <form id="appointment-form" class="stack">
-            <label>
-              <span>Identificador do cliente</span>
-              <input name="customerId" type="text">
-            </label>
+  <div class="card">
+    <form id="appointment-form" class="stack">
+      <label>
+        <span>Identificador do cliente</span>
+        <input name="customerId" type="text">
+      </label>
 
-            <label>
-              <span>Nome do cliente</span>
-              <input name="customerName" type="text" required>
-            </label>
+      <label>
+        <span>Nome do cliente</span>
+        <input name="customerName" type="text" required>
+      </label>
 
-            <label>
-              <span>Identificador do serviço</span>
-              <input name="serviceId" type="text">
-            </label>
+      <label>
+        <span>Identificador do serviço</span>
+        <input name="serviceId" type="text">
+      </label>
 
-            <label>
-              <span>Nome do serviço</span>
-              <input name="serviceName" type="text" required>
-            </label>
+      <label>
+        <span>Nome do serviço</span>
+        <input name="serviceName" type="text" required>
+      </label>
 
-            <label>
-              <span>Data</span>
-              <input name="date" type="date" required>
-            </label>
+      <label>
+        <span>Data</span>
+        <input name="date" type="date" required>
+      </label>
 
-            <label>
-              <span>Horário</span>
-              <input name="time" type="time" required>
-            </label>
+      <label>
+        <span>Horário</span>
+        <input name="time" type="time" required>
+      </label>
 
-            <label>
-              <span>Duração em minutos</span>
-              <input name="durationMinutes" type="number" min="1" required>
-            </label>
+      <label>
+        <span>Duração em minutos</span>
+        <input name="durationMinutes" type="number" min="1" required>
+      </label>
 
-            <label>
-              <span>Preço</span>
-              <input name="price" type="number" min="0" step="0.01" required>
-            </label>
+      <label>
+        <span>Preço</span>
+        <input name="price" type="number" min="0" step="0.01" required>
+      </label>
 
-            <label>
-              <span>Observações</span>
-              <input name="notes" type="text">
-            </label>
+      <label>
+        <span>Observações</span>
+        <input name="notes" type="text">
+      </label>
 
-            <button class="button primary" type="submit">Cadastrar agendamento</button>
-            <p id="appointment-feedback" class="feedback"></p>
-          </form>
+      <button class="button primary" type="submit">Cadastrar agendamento</button>
+      <p id="appointment-feedback" class="feedback"></p>
+    </form>
 
-          <div class="top-gap">
-            <ul class="simple-list" id="appointments-list"></ul>
-          </div>
-        </div>
-      </section>
+    <div class="top-gap">
+      <div class="filter-bar">
+        <label>
+          <span>Início</span>
+          <input id="appointments-filter-start" type="date">
+        </label>
+
+        <label>
+          <span>Fim</span>
+          <input id="appointments-filter-end" type="date">
+        </label>
+
+        <button class="button" id="appointments-filter-button" type="button">Filtrar agenda</button>
+        <button class="button" id="appointments-filter-reset-button" type="button">Limpar</button>
+      </div>
+    </div>
+
+    <div class="top-gap scroll-panel">
+      <ul class="simple-list" id="appointments-list"></ul>
+    </div>
+  </div>
+</section>
 
       <section id="relatorios" class="section">
   <div class="section-heading">
